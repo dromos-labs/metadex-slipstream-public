@@ -1,0 +1,58 @@
+[fmt]
+line_length = 120
+tab_width = 2
+bracket_spacing = false
+int_types = 'long'
+quote_style = 'single'
+number_underscore = 'thousands'
+multiline_func_header = 'params_first_multi'
+sort_imports = true
+
+[profile.default]
+src = "contracts"
+test = "test"
+out = "out"
+libs = ["lib"]
+
+# We use explicit remappings from remappings.txt
+auto_detect_remappings = false
+
+optimizer = true
+optimizer_runs = 200
+
+fs_permissions = [{ access = "read-write", path = "./" }]
+
+no_match_test = "testEchidna|testGasFork"
+
+show_progress = true
+
+[profile.optimized]
+# Production-style build for new 0.8.x modules. via_ir + higher optimizer runs.
+# Invoke with FOUNDRY_PROFILE=optimized forge build.
+via_ir = true
+optimizer_runs = 10_000
+out = "out-via-ir"
+
+[fuzz]
+runs = 256
+
+[profile.ci.fuzz]
+runs = 5000
+
+# Fast edit-loop profile: same build settings as default, fewer fuzz runs.
+# Invoke with FOUNDRY_PROFILE=dev forge test. Always finish with a default-profile (256-run) pass.
+[profile.dev.fuzz]
+runs = 64
+
+[rpc_endpoints]
+base = "${BASE_RPC_URL}"
+optimism = "${OPTIMISM_RPC_URL}"
+mainnet = "${ETHEREUM_RPC_URL}"
+ethereum = "${ETHEREUM_RPC_URL}"
+arc = "${ARC_RPC_URL}"
+
+[etherscan]
+base = { key = "${BASE_ETHERSCAN_API_KEY}", url = "${BASE_ETHERSCAN_VERIFIER_URL}" }
+optimism = { key = "${OPTIMISM_ETHERSCAN_API_KEY}", url = "${OPTIMISM_ETHERSCAN_VERIFIER_URL}" }
+ethereum = { key = "${ETHEREUM_ETHERSCAN_API_KEY}", url = "${ETHEREUM_ETHERSCAN_VERIFIER_URL}", chain = 1 }
+arc = { key = "${ARC_ETHERSCAN_API_KEY}", url = "${ARC_ETHERSCAN_VERIFIER_URL}", chain = 5042 }
