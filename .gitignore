@@ -1,0 +1,13 @@
+artifacts/
+cache/
+cache_hardhat/
+crytic-export/
+node_modules/
+typechain/
+out/
+broadcast
+
+.vscode
+.env
+
+echidna_*_corpus/

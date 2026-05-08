@@ -1,0 +1,72 @@
+{
+  "name": "@aero/slipstream",
+  "description": "Slipstream Core Contracts",
+  "license": "BUSL-1.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "version": "1.0.1",
+  "homepage": "https://aero.xyz",
+  "keywords": [
+    "aero",
+    "slipstream"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dromos-labs/metadex-slipstream"
+  },
+  "files": [
+    "contracts/core/interfaces",
+    "contracts/core/libraries",
+    "contracts/periphery/base",
+    "contracts/periphery/interfaces",
+    "contracts/peripherylibraries",
+    "artifacts/contracts/core/CLFactory.sol/CLFactory.json",
+    "artifacts/contracts/core/CLPool.sol/CLPool.json",
+    "artifacts/contracts/core/interfaces/**/*.json",
+    "!artifacts/contracts/core/interfaces/**/*.dbg.json",
+    "artifacts/contracts/periphery/**/*.json",
+    "!artifacts/contracts/periphery/**/*.dbg.json",
+    "!artifacts/contracts/periphery/test/**/*",
+    "!artifacts/contracts/periphery/base/**/*"
+  ],
+  "engines": {
+    "node": ">=10"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-foundry": "^1.0.1",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-etherscan": "^2.1.8",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@typechain/ethers-v5": "^4.0.0",
+    "@typechain/hardhat": "^6.1.6",
+    "@types/chai": "^4.2.6",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "decimal.js": "^10.2.1",
+    "ethereum-waffle": "^3.0.2",
+    "ethers": "^5.0.8",
+    "hardhat": "2.24.2",
+    "hardhat-preprocessor": "^0.1.5",
+    "hardhat-typechain": "^0.3.5",
+    "is-svg": "^4.3.1",
+    "mocha": "^6.2.2",
+    "mocha-chai-jest-snapshot": "^1.1.0",
+    "prettier": "^2.0.5",
+    "prettier-plugin-solidity": "^1.0.0-alpha.59",
+    "solhint": "^3.2.1",
+    "solhint-plugin-prettier": "^0.0.5",
+    "ts-generator": "^0.1.1",
+    "ts-node": "^8.5.4",
+    "typechain": "^4.0.0",
+    "typescript": "^3.7.3",
+    "dotenv": "^14.2.0"
+  },
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "test:all": "UPDATE_SNAPSHOT=1 yarn test",
+    "format": "prettier --write 'test/**/*.ts'",
+    "format:check": "prettier --check 'test/**/*.ts'"
+  }
+}
