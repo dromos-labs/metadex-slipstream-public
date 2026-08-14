@@ -2,8 +2,8 @@ VERSIONS — metadex-slipstream
 Each version's Dromos Restricted Use License 1.0 converts to
 GPL-2.0-or-later five years after its first public distribution.
 
-version:
-commit tag:
-first-distribution: 2026-08-DD (public source publication)
-converts-to-gpl: 2031-08-DD
+version: 1.0.0-provisional.1
+commit tag: 103f003087aa6fab073e09acdac2f942abea1cd4
+first-distribution: 2026-08-14
+converts-to-gpl: 2031-08-14
 deployments: (none — provisional)
