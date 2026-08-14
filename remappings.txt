@@ -1,0 +1,7 @@
+contracts/=contracts/
+script/=script/
+forge-std/=node_modules/forge-std/src/
+@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
+@uniswap/lib/=node_modules/@uniswap/lib/
+@nomad-xyz/excessively-safe-call/=node_modules/@nomad-xyz/excessively-safe-call/
+base64-sol/=node_modules/base64-sol/

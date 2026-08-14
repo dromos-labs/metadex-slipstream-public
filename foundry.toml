@@ -1,0 +1,42 @@
+[fmt]
+line_length = 120
+tab_width = 2
+bracket_spacing = false
+int_types = 'long'
+quote_style = 'single'
+number_underscore = 'thousands'
+multiline_func_header = 'params_first_multi'
+sort_imports = true
+
+[profile.default]
+src = "contracts"
+script = "script"
+out = "out"
+libs = ["node_modules"]
+auto_detect_remappings = false
+
+optimizer = true
+optimizer_runs = 200
+
+fs_permissions = [{ access = "read-write", path = "./" }]
+
+show_progress = true
+
+[profile.optimized]
+# Production-style build for new 0.8.x modules. via_ir + higher optimizer runs.
+# Invoke with FOUNDRY_PROFILE=optimized forge build.
+via_ir = true
+optimizer_runs = 10_000
+out = "out-via-ir"
+
+[fuzz]
+runs = 256
+
+[profile.ci.fuzz]
+runs = 5000
+
+[rpc_endpoints]
+optimism = "${OPTIMISM_RPC_URL}"
+
+[etherscan]
+optimism = { key = "${OPTIMISM_ETHERSCAN_API_KEY}", url = "${OPTIMISM_ETHERSCAN_VERIFIER_URL}" }

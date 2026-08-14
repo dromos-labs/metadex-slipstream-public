@@ -1,0 +1,34 @@
+{
+  "name": "metadex-slipstream-public",
+  "version": "1.0.1",
+  "description": "Metadex Slipstream Contracts",
+  "keywords": [
+    "metadex",
+    "slipstream"
+  ],
+  "homepage": "https://aero.xyz",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dromos-labs/metadex-slipstream-public.git"
+  },
+  "license": "LicenseRef-Dromos-Restricted-Use-1.0",
+  "author": "DROMOS",
+  "files": [
+    "contracts",
+    "script"
+  ],
+  "scripts": {
+    "build": "forge build",
+    "build:optimized": "FOUNDRY_PROFILE=optimized forge build",
+    "fmt:check": "forge fmt --check"
+  },
+  "dependencies": {
+    "@nomad-xyz/excessively-safe-call": "0.0.1-rc.1",
+    "@openzeppelin/contracts": "3.4.2-solc-0.7",
+    "@uniswap/lib": "4.0.1-alpha",
+    "base64-sol": "1.1.0"
+  },
+  "devDependencies": {
+    "forge-std": "github:foundry-rs/forge-std#v1.10.0"
+  }
+}
