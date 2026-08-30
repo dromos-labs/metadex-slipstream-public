@@ -1,0 +1,5 @@
+UnitSwapHookLib::Cap
+├── when fee is lt swap fee ceil
+│   └── it returns fee
+└── when fee is geq swap fee ceil
+    └── it returns _SWAP_FEE_CEIL

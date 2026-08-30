@@ -1,0 +1,13 @@
+ApproveForClaimTest
+├── When operator is zero address
+│   └── It should revert with {ZA}
+├── When granting claim approval
+│   ├── It should set claim approval
+│   └── It should emit ClaimApproval
+├── When revoking claim approval
+│   ├── It should clear claim approval
+│   └── It should emit ClaimApproval
+├── When checking another account or operator
+│   └── It should keep approval scoped to account and operator
+└── When granting claim approval twice
+    └── It should keep approval enabled

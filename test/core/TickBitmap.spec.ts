@@ -1,14 +1,28 @@
-import { ethers } from 'hardhat'
-import { TickBitmapTest } from '../../typechain/TickBitmapTest'
+import { Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
 import { expect } from './shared/expect'
 import snapshotGasCost from './shared/snapshotGasCost'
 
 describe('TickBitmap', () => {
-  let tickBitmap: TickBitmapTest
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
+
+  let tickBitmap: Contract
+
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+  })
+
+  const fixture = async () => {
+    const tickBitmapTestFactory = await ethers.getContractFactory('TickBitmapTest')
+    return (await tickBitmapTestFactory.deploy()) as unknown as Contract
+  }
 
   beforeEach('deploy TickBitmapTest', async () => {
-    const tickBitmapTestFactory = await ethers.getContractFactory('TickBitmapTest')
-    tickBitmap = (await tickBitmapTestFactory.deploy()) as TickBitmapTest
+    tickBitmap = await networkHelpers.loadFixture(fixture)
   })
 
   async function initTicks(ticks: number[]): Promise<void> {

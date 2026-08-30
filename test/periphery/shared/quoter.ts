@@ -1,12 +1,12 @@
-import { Contract, Wallet } from 'ethers'
-import { MockTimeNonfungiblePositionManager } from '../../../typechain'
+import { Contract } from 'ethers'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
 import { FeeAmount, TICK_SPACINGS } from './constants'
 import { encodePriceSqrt } from './encodePriceSqrt'
 import { getMaxTick, getMinTick } from './ticks'
 
 export async function createPool(
-  nft: MockTimeNonfungiblePositionManager,
-  wallet: Wallet,
+  nft: Contract,
+  wallet: HardhatEthersSigner,
   tokenAddressA: string,
   tokenAddressB: string
 ) {
@@ -34,8 +34,8 @@ export async function createPool(
 }
 
 export async function createPoolWithMultiplePositions(
-  nft: MockTimeNonfungiblePositionManager,
-  wallet: Wallet,
+  nft: Contract,
+  wallet: HardhatEthersSigner,
   tokenAddressA: string,
   tokenAddressB: string
 ) {
@@ -97,8 +97,8 @@ export async function createPoolWithMultiplePositions(
 }
 
 export async function createPoolWithZeroTickInitialized(
-  nft: MockTimeNonfungiblePositionManager,
-  wallet: Wallet,
+  nft: Contract,
+  wallet: HardhatEthersSigner,
   tokenAddressA: string,
   tokenAddressB: string
 ) {
@@ -174,7 +174,7 @@ export async function createPair(
   ).wait()
   // we can extract the pair address from the emitted event
   // always the 4th element:         emit PairCreated(token0, token1, stable, pair, allPairs.length);
-  const pairAddress = receipt.events[0].args[3]
+  const pairAddress = receipt.logs[0].args[3]
   if (!pairAddress) throw new Error('pairAddress not found in txn receipt')
   return pairAddress
 }

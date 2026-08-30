@@ -1,72 +1,91 @@
 {
-  "name": "@aero/slipstream",
-  "description": "Slipstream Core Contracts",
-  "license": "BUSL-1.1",
-  "publishConfig": {
-    "access": "public"
-  },
+  "name": "metadex-slipstream-public",
   "version": "1.0.1",
-  "homepage": "https://aero.xyz",
+  "description": "Metadex Slipstream Contracts",
   "keywords": [
-    "aero",
+    "metadex",
     "slipstream"
   ],
+  "homepage": "https://aero.xyz",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dromos-labs/metadex-slipstream"
+    "url": "git+https://github.com/dromos-labs/metadex-slipstream-public.git"
   },
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "DROMOS",
+  "type": "module",
   "files": [
-    "contracts/core/interfaces",
-    "contracts/core/libraries",
-    "contracts/periphery/base",
-    "contracts/periphery/interfaces",
-    "contracts/peripherylibraries",
-    "artifacts/contracts/core/CLFactory.sol/CLFactory.json",
-    "artifacts/contracts/core/CLPool.sol/CLPool.json",
-    "artifacts/contracts/core/interfaces/**/*.json",
-    "!artifacts/contracts/core/interfaces/**/*.dbg.json",
-    "artifacts/contracts/periphery/**/*.json",
-    "!artifacts/contracts/periphery/**/*.dbg.json",
-    "!artifacts/contracts/periphery/test/**/*",
-    "!artifacts/contracts/periphery/base/**/*"
+    "contracts",
+    "script"
   ],
-  "engines": {
-    "node": ">=10"
+  "scripts": {
+    "build": "forge build",
+    "build:optimized": "FOUNDRY_PROFILE=optimized forge build",
+    "compile": "hardhat compile",
+    "fmt:check": "forge fmt --check",
+    "format": "prettier --write 'test/**/*.ts'",
+    "format:check": "prettier --check 'test/**/*.ts'",
+    "lint:natspec": "lintspec",
+    "lint:slither": "FOUNDRY_EVM_VERSION=cancun slither --solc-solcs-select 0.8.35",
+    "lint:sol": "solhint 'contracts/**/*.sol' 'script/**/*.sol' 'test/**/*.sol'",
+    "prepare": "husky",
+    "test": "yarn test:hardhat && yarn test:forge",
+    "test:all": "UPDATE_SNAPSHOT=1 yarn test:hardhat",
+    "test:forge": "forge test -vvv",
+    "test:hardhat": "hardhat test"
+  },
+  "lint-staged": {
+    "test/**/*.ts": "prettier --write",
+    "package.json": "sort-package-json"
+  },
+  "dependencies": {
+    "@nomad-xyz/excessively-safe-call": "0.0.1-rc.1",
+    "@openzeppelin/contracts": "3.4.2-solc-0.7",
+    "@uniswap/lib": "4.0.1-alpha",
+    "base64-sol": "1.1.0"
   },
   "devDependencies": {
-    "@nomicfoundation/hardhat-foundry": "^1.0.1",
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-etherscan": "^2.1.8",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@typechain/ethers-v5": "^4.0.0",
-    "@typechain/hardhat": "^6.1.6",
-    "@types/chai": "^4.2.6",
-    "@types/mocha": "^5.2.7",
-    "chai": "^4.2.0",
-    "decimal.js": "^10.2.1",
-    "ethereum-waffle": "^3.0.2",
-    "ethers": "^5.0.8",
-    "hardhat": "2.24.2",
-    "hardhat-preprocessor": "^0.1.5",
-    "hardhat-typechain": "^0.3.5",
-    "is-svg": "^4.3.1",
-    "mocha": "^6.2.2",
-    "mocha-chai-jest-snapshot": "^1.1.0",
-    "prettier": "^2.0.5",
-    "prettier-plugin-solidity": "^1.0.0-alpha.59",
-    "solhint": "^3.2.1",
-    "solhint-plugin-prettier": "^0.0.5",
-    "ts-generator": "^0.1.1",
-    "ts-node": "^8.5.4",
-    "typechain": "^4.0.0",
-    "typescript": "^3.7.3",
-    "dotenv": "^14.2.0"
+    "@commitlint/cli": "19.3.0",
+    "@commitlint/config-conventional": "19.2.2",
+    "@nomicfoundation/hardhat-ethers": "4.0.11",
+    "@nomicfoundation/hardhat-ethers-chai-matchers": "3.0.8",
+    "@nomicfoundation/hardhat-ignition": "3.1.5",
+    "@nomicfoundation/hardhat-ignition-ethers": "3.1.5",
+    "@nomicfoundation/hardhat-keystore": "3.0.9",
+    "@nomicfoundation/hardhat-mocha": "3.0.19",
+    "@nomicfoundation/hardhat-network-helpers": "3.0.8",
+    "@nomicfoundation/hardhat-node-test-runner": "3.0.15",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "3.0.5",
+    "@nomicfoundation/hardhat-typechain": "3.0.9",
+    "@nomicfoundation/hardhat-verify": "3.0.17",
+    "@openzeppelin/contracts-v5": "npm:@openzeppelin/contracts@5.6.1",
+    "@types/chai": "5.2.3",
+    "@types/mocha": "5.2.7",
+    "@types/node": "22.19.18",
+    "chai": "5.3.3",
+    "decimal.js": "10.2.1",
+    "dotenv": "14.3.2",
+    "ethers": "6.16.0",
+    "hardhat": "3.4.5",
+    "husky": ">=9",
+    "is-svg": "4.4.0",
+    "lint-staged": "^16.0.0",
+    "metadex": "git+https://github.com/dromos-labs/metadex-public.git",
+    "mocha": "11.7.5",
+    "mocha-chai-jest-snapshot": "1.1.1",
+    "prettier": "2.8.8",
+    "prettier-plugin-solidity": "1.0.0-beta.2",
+    "solhint": "3.3.2",
+    "solhint-community": "4.0.1",
+    "solhint-config-wonderland": "0.0.1",
+    "solhint-plugin-prettier": "0.0.5",
+    "sort-package-json": "3.4.0",
+    "typescript": "5.9.3"
   },
-  "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test",
-    "test:all": "UPDATE_SNAPSHOT=1 yarn test",
-    "format": "prettier --write 'test/**/*.ts'",
-    "format:check": "prettier --check 'test/**/*.ts'"
+  "engines": {
+    "node": ">=22.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

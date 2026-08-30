@@ -1,58 +1,67 @@
-import { Fixture } from 'ethereum-waffle'
-import { ethers, waffle } from 'hardhat'
-import {
-  ICLPool,
-  ICLFactory,
-  IWETH9,
-  MockTimeSwapRouter,
-  TestERC20,
-  NonfungibleTokenPositionDescriptor,
+import { MaxUint256, ZeroAddress } from 'ethers'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
+
+import type {
+  CLFactory,
+  CLGauge,
+  CLGaugeFactory,
+  CustomUnstakedFeeModule,
+  MockFactoryRegistry,
   MockTimeNonfungiblePositionManager,
-} from '../../../typechain'
-import { MockVoter } from '../../../typechain/MockVoter'
-import { CustomUnstakedFeeModule, MockVotingRewardsFactory } from '../../../typechain'
-import { CLGaugeFactory } from '../../../typechain/CLGaugeFactory'
-import { CLGauge } from '../../../typechain/CLGauge'
-import { constants } from 'ethers'
+  MockTimeSwapRouter,
+  MockVoter,
+  MockVotingEscrow,
+  MockVotingRewardsFactory,
+  NFTDescriptor,
+  NFTSVG,
+  NonfungibleTokenPositionDescriptor,
+  TestERC20,
+} from '../../../types/ethers-contracts/index.js'
+import type { EthersHelpers } from '../../shared/network'
+import type { Contract } from 'ethers'
 
 import WETH9 from '../contracts/WETH9.json'
 
-const wethFixture: Fixture<{ weth9: IWETH9 }> = async ([wallet]) => {
-  const weth9 = (await waffle.deployContract(wallet, {
-    bytecode: WETH9.bytecode,
-    abi: WETH9.abi,
-  })) as IWETH9
-
+export async function wethFixture(ethers: EthersHelpers, wallet: HardhatEthersSigner): Promise<{ weth9: Contract }> {
+  const weth9Factory = new ethers.ContractFactory(WETH9.abi, WETH9.bytecode, wallet)
+  const weth9 = (await weth9Factory.deploy()) as unknown as Contract
   return { weth9 }
 }
 
-const v3CoreFactoryFixture: Fixture<{
-  factory: ICLFactory
+export async function v3CoreFactoryFixture(
+  ethers: EthersHelpers,
+  wallet: HardhatEthersSigner
+): Promise<{
+  factory: CLFactory
   nft: MockTimeNonfungiblePositionManager
-  weth9: IWETH9
+  weth9: Contract
   tokens: [TestERC20, TestERC20, TestERC20]
   nftDescriptor: NonfungibleTokenPositionDescriptor
-}> = async ([wallet], provider) => {
-  const { weth9 } = await wethFixture([wallet], provider)
+}> {
+  const { weth9 } = await wethFixture(ethers, wallet)
   const tokenFactory = await ethers.getContractFactory('TestERC20')
-  const rewardToken: TestERC20 = (await tokenFactory.deploy(constants.MaxUint256.div(2))) as TestERC20 // do not use maxu256 to avoid overflowing
-  ;[wallet] = await (ethers as any).getSigners()
+  const rewardToken = (await tokenFactory.deploy(MaxUint256 / 2n)) as unknown as TestERC20 // do not use maxu256 to avoid overflowing
 
   const tokens: [TestERC20, TestERC20, TestERC20] = [
-    (await tokenFactory.deploy(constants.MaxUint256.div(2))) as TestERC20, // do not use maxu256 to avoid overflowing
-    (await tokenFactory.deploy(constants.MaxUint256.div(2))) as TestERC20,
-    (await tokenFactory.deploy(constants.MaxUint256.div(2))) as TestERC20,
+    (await tokenFactory.deploy(MaxUint256 / 2n)) as unknown as TestERC20, // do not use maxu256 to avoid overflowing
+    (await tokenFactory.deploy(MaxUint256 / 2n)) as unknown as TestERC20,
+    (await tokenFactory.deploy(MaxUint256 / 2n)) as unknown as TestERC20,
   ]
 
-  tokens.sort((a, b) => (a.address.toLowerCase() < b.address.toLowerCase() ? -1 : 1))
+  const addrs = await Promise.all(tokens.map((t) => t.getAddress()))
+  const sorted = tokens
+    .map((t, i) => ({ t, addr: addrs[i] }))
+    .sort((a, b) => (a.addr.toLowerCase() < b.addr.toLowerCase() ? -1 : 1))
+  tokens[0] = sorted[0].t
+  tokens[1] = sorted[1].t
+  tokens[2] = sorted[2].t
 
   const Pool = await ethers.getContractFactory('CLPool')
   const Factory = await ethers.getContractFactory('CLFactory')
   const CustomUnstakedFeeModuleFactory = await ethers.getContractFactory('CustomUnstakedFeeModule')
-  const pool = (await Pool.deploy()) as ICLPool
+  const pool = await Pool.deploy()
 
   const MockVoterFactory = await ethers.getContractFactory('MockVoter')
-  const GaugeImplementationFactory = await ethers.getContractFactory('CLGauge')
   const GaugeFactoryFactory = await ethers.getContractFactory('CLGaugeFactory')
   const MockFactoryRegistryFactory = await ethers.getContractFactory('MockFactoryRegistry')
   const MockVotingRewardsFactoryFactory = await ethers.getContractFactory('MockVotingRewardsFactory')
@@ -61,86 +70,100 @@ const v3CoreFactoryFixture: Fixture<{
   const positionManagerFactory = await ethers.getContractFactory('MockTimeNonfungiblePositionManager')
 
   // voter & gauge factory set up
-  const mockVotingEscrow = await MockVotingEscrowFactory.deploy(wallet.address)
-  const mockFactoryRegistry = await MockFactoryRegistryFactory.deploy()
+  const mockVotingEscrow = (await MockVotingEscrowFactory.deploy(wallet.address)) as unknown as MockVotingEscrow
+  const mockFactoryRegistry = (await MockFactoryRegistryFactory.deploy()) as unknown as MockFactoryRegistry
   const mockVoter = (await MockVoterFactory.deploy(
-    rewardToken.address,
-    mockFactoryRegistry.address,
-    mockVotingEscrow.address,
-    '0x0000000000000000000000000000000000000000'
-  )) as MockVoter
+    await rewardToken.getAddress(),
+    await mockFactoryRegistry.getAddress(),
+    await mockVotingEscrow.getAddress()
+  )) as unknown as MockVoter
 
   const factory = (await Factory.deploy(
     wallet.address,
     wallet.address,
     wallet.address,
-    mockVoter.address,
-    pool.address
-  )) as ICLFactory
+    await mockVoter.getAddress(),
+    await pool.getAddress(),
+    await mockFactoryRegistry.getAddress(),
+    ZeroAddress, // defaultSwapHook
+    wallet.address, // discountRegistryManager
+    wallet.address // clPoolTapeManager
+  )) as unknown as CLFactory
   const customUnstakedFeeModule = (await CustomUnstakedFeeModuleFactory.deploy(
-    factory.address
-  )) as CustomUnstakedFeeModule
-  await factory.setUnstakedFeeModule(customUnstakedFeeModule.address)
+    await factory.getAddress()
+  )) as unknown as CustomUnstakedFeeModule
+  await factory.setUnstakedFeeModule(await customUnstakedFeeModule.getAddress())
 
   const nftDescriptorLibraryFactory = await ethers.getContractFactory('NFTDescriptor')
-  const nftDescriptorLibrary = await nftDescriptorLibraryFactory.deploy()
+  const nftDescriptorLibrary = (await nftDescriptorLibraryFactory.deploy()) as unknown as NFTDescriptor
   const nftSVGLibraryFactory = await ethers.getContractFactory('NFTSVG')
-  const nftSVGLibrary = await nftSVGLibraryFactory.deploy()
+  const nftSVGLibrary = (await nftSVGLibraryFactory.deploy()) as unknown as NFTSVG
   const positionDescriptorFactory = await ethers.getContractFactory('NonfungibleTokenPositionDescriptor', {
     libraries: {
-      NFTDescriptor: nftDescriptorLibrary.address,
-      NFTSVG: nftSVGLibrary.address,
+      NFTDescriptor: await nftDescriptorLibrary.getAddress(),
+      NFTSVG: await nftSVGLibrary.getAddress(),
     },
   })
   const nftDescriptor = (await positionDescriptorFactory.deploy(
-    tokens[0].address,
+    await tokens[0].getAddress(),
     // 'ETH' as a bytes32 string
     '0x4554480000000000000000000000000000000000000000000000000000000000'
-  )) as NonfungibleTokenPositionDescriptor
+  )) as unknown as NonfungibleTokenPositionDescriptor
 
   const nft = (await positionManagerFactory.deploy(
     wallet.address,
-    factory.address,
-    weth9.address,
-    nftDescriptor.address
-  )) as MockTimeNonfungiblePositionManager
+    await factory.getAddress(),
+    await weth9.getAddress(),
+    await nftDescriptor.getAddress()
+  )) as unknown as MockTimeNonfungiblePositionManager
 
-  const gaugeImplementation = (await GaugeImplementationFactory.deploy()) as CLGauge
+  const mockVotingRewardsFactory =
+    (await MockVotingRewardsFactoryFactory.deploy()) as unknown as MockVotingRewardsFactory
   const gaugeFactory = (await GaugeFactoryFactory.deploy(
-    wallet.address,
-    mockVoter.address,
-    nft.address,
-    gaugeImplementation.address
-  )) as CLGaugeFactory
+    await mockVoter.getAddress(),
+    await mockVoter.getAddress(), // gauge manager, played by the mock voter in tests
+    await mockVotingRewardsFactory.getAddress(),
+    await nft.getAddress(),
+    {
+      capAdmin: wallet.address,
+      referralAdmin: wallet.address,
+      penaltyAdmin: wallet.address,
+      capOperator: wallet.address,
+    },
+    {
+      defaultCap: 10n ** 18n,
+      operatorMinCap: 1,
+      operatorMaxCap: 10n ** 18n,
+      maxMinStakeBlocks: 7 * 24 * 60 * 60,
+    }
+  )) as unknown as CLGaugeFactory
+  await gaugeFactory.setPenaltyConfig(0, 0)
 
-  // approve pool factory <=> gauge factory combination
-  const mockVotingRewardsFactory = (await MockVotingRewardsFactoryFactory.deploy()) as MockVotingRewardsFactory
-  await mockFactoryRegistry.approve(
-    factory.address,
-    mockVotingRewardsFactory.address, // unused in hardhat tests
-    gaugeFactory.address
-  )
+  // link pool factory <=> gauge factory combination
+  await mockFactoryRegistry.registerFactories(await gaugeFactory.getAddress(), await factory.getAddress())
 
   // backwards compatible with v3-periphery tests
   await factory['enableTickSpacing(int24,uint24)'](10, 500)
   await factory['enableTickSpacing(int24,uint24)'](60, 3_000)
-  return { factory, gaugeFactory, nft, weth9, tokens, nftDescriptor }
+  return { factory, nft, weth9, tokens, nftDescriptor }
 }
 
-export const v3RouterFixture: Fixture<{
-  weth9: IWETH9
-  factory: ICLFactory
+export async function v3RouterFixture(
+  ethers: EthersHelpers,
+  wallet: HardhatEthersSigner
+): Promise<{
+  weth9: Contract
+  factory: CLFactory
   router: MockTimeSwapRouter
   nft: MockTimeNonfungiblePositionManager
   tokens: [TestERC20, TestERC20, TestERC20]
   nftDescriptor: NonfungibleTokenPositionDescriptor
-}> = async ([wallet], provider) => {
-  const { factory, nft, weth9, tokens, nftDescriptor } = await v3CoreFactoryFixture([wallet], provider)
+}> {
+  const { factory, nft, weth9, tokens, nftDescriptor } = await v3CoreFactoryFixture(ethers, wallet)
 
-  const router = (await (await ethers.getContractFactory('MockTimeSwapRouter')).deploy(
-    factory.address,
-    weth9.address
-  )) as MockTimeSwapRouter
+  const router = (await (
+    await ethers.getContractFactory('MockTimeSwapRouter')
+  ).deploy(await factory.getAddress(), await weth9.getAddress())) as unknown as MockTimeSwapRouter
 
   return { factory, weth9, router, nft, tokens, nftDescriptor }
 }

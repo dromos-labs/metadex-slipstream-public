@@ -1,0 +1,14 @@
+UnitCLPool::UpdateRewardsGrowthGlobal
+├── when stakedLiquidity is gt zero
+│   ├── it should credit the reward growth accumulator
+│   ├── it should credit the seconds per staked liquidity cumulative by elapsed over staked
+│   ├── it should not update the rollover
+│   ├── it should update the lastUpdated
+│   └── when given a concrete reward and staked liquidity
+│       ├── it should add the rounded growth to the previous accumulator
+│       └── it should add the rounded elapsed over staked to the previous cumulative
+└── when stakedLiquidity is eq to zero
+    ├── it should add the reward to the rollover
+    ├── it should not update the reward growth accumulator
+    ├── it should not update the seconds per staked liquidity cumulative
+    └── it should update the lastUpdated

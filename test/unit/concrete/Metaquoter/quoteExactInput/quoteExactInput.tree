@@ -1,0 +1,29 @@
+UnitMetaquoter::QuoteExactInput
+├── when the path is empty
+│   └── it reverts with EP
+└── given the path is not empty
+    ├── when a pool factory is not approved
+    │   └── it reverts with AF
+    └── given the pool factory is approved
+        ├── when the pool is not a registered target
+        │   └── it reverts with IP
+        └── given the pool is a registered target
+            ├── when tokenIn is not a token of its hop pool
+            │   └── it reverts with TI
+            └── given tokenIn is a token of its hop pool
+                ├── when the route is a single CL pool
+                │   ├── it returns the CL quote as amountOut
+                │   └── it populates the lists at the pool index
+                ├── when the route is a single V2 pool
+                │   ├── it returns the getAmountOutWithTotalFee quote as amountOut
+                │   └── it leaves the lists zeroed
+                ├── when the route mixes CL and V2 pools
+                │   ├── it chains each hop output into the next hop input
+                │   ├── it populates the lists only at CL indexes
+                │   └── it returns the final amountOut
+                ├── when a pool reports an unknown pool type
+                │   ├── it does not read the factory pause flag
+                │   ├── it does not read the pool tokens
+                │   └── it reverts with PT
+                └── when a V2 hop quotes zero output
+                    └── it reverts with IO

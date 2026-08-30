@@ -1,0 +1,23 @@
+CLPoolCollectFeesConcreteUnitTest
+├── When the caller is not the gauge
+│   └── It should revert with {NG}
+├── When the pool is locked
+│   └── It should revert with {LOK}
+├── When gauge fees are zero
+│   ├── It should return zero amounts
+│   ├── It should leave gauge fees at zero
+│   ├── It should not transfer tokens
+│   └── It should emit a {CollectFees} event with the recipient
+├── When gauge fees are one wei
+│   ├── It should return zero amounts
+│   ├── It should retain one wei in the pool
+│   ├── It should not transfer tokens
+│   └── It should emit a {CollectFees} event with the recipient
+├── When gauge fees are two wei
+│   ├── It should transfer one wei to the recipient
+│   ├── It should retain one wei in the pool
+│   └── It should emit a {CollectFees} event with the recipient
+└── When gauge fees are greater than one wei
+    ├── It should transfer the claimable fees to the recipient
+    ├── It should retain one wei in the pool
+    └── It should emit a {CollectFees} event with the recipient

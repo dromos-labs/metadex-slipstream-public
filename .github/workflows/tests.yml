@@ -8,71 +8,37 @@ on:
 
 jobs:
   unit-tests:
-    name: Unit Tests
+    name: Hardhat Unit Tests
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          persist-credentials: false
 
-      - id: yarn-cache
-        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: install-tools
+        uses: ./.github/workflows/install-tools
 
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.yarn-cache.outputs.dir }}
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      # Runs a single command using the runners shell
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: v1.0.0
-
-      - name: Install deps
-        run: forge install
-
-      # This is required separately from yarn test because it generates the typechain definitions
-      - name: Compile
+      - name: Compile (generates typechain)
         run: yarn compile
 
-      - name: Run unit tests
-        run: yarn test --parallel
-        env: 
+      - name: Run hardhat tests
+        run: yarn test:hardhat
+        env:
           OPTIMISM_RPC_URL: ${{ secrets.OPTIMISM_RPC_URL }}
   test:
     name: Foundry Unit Tests
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    env:
+      FOUNDRY_PROFILE: ci
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install dev dependencies
-        run: yarn install
+          persist-credentials: false
 
-      # Runs a single command using the runners shell
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: v1.0.0
+      - name: install-tools
+        uses: ./.github/workflows/install-tools
 
-      - name: Install deps
-        run: forge install
-
-      - name: Run tests
-        run: OUTPUT_FILENAME=Optimism.json CONSTANTS_FILENAME=Optimism.json forge test -vvv
+      - name: Run forge tests
+        run: OUTPUT_FILENAME=Optimism.json CONSTANTS_FILENAME=Optimism.json yarn test:forge
         env:
-          FOUNDRY_PROFILE: ci
           OPTIMISM_RPC_URL: ${{ secrets.OPTIMISM_RPC_URL }}

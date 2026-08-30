@@ -1,15 +1,18 @@
-import { waffle, ethers } from 'hardhat'
+import { Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
 import { FeeAmount, TICK_SPACINGS } from './shared/constants'
 
 import { expect } from './shared/expect'
 
-import { PathTest } from '../../typechain'
 import { decodePath, encodePath } from './shared/path'
 
 import snapshotGasCost from './shared/snapshotGasCost'
 
 describe('Path', () => {
-  let path: PathTest
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
+  let path: Contract
 
   let tokenAddresses = [
     '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707',
@@ -18,19 +21,19 @@ describe('Path', () => {
   ]
   let tickSpacings = [TICK_SPACINGS[FeeAmount.MEDIUM], TICK_SPACINGS[FeeAmount.MEDIUM]]
 
-  const pathTestFixture = async () => {
-    const pathTestFactory = await ethers.getContractFactory('PathTest')
-    return (await pathTestFactory.deploy()) as PathTest
-  }
-
-  let loadFixture: ReturnType<typeof waffle.createFixtureLoader>
-
-  before('create fixture loader', async () => {
-    loadFixture = waffle.createFixtureLoader(await (ethers as any).getSigners())
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
   })
 
+  const pathTestFixture = async () => {
+    const pathTestFactory = await ethers.getContractFactory('PathTest')
+    return (await pathTestFactory.deploy()) as unknown as Contract
+  }
+
   beforeEach('deploy PathTest', async () => {
-    path = await loadFixture(pathTestFixture)
+    path = await networkHelpers.loadFixture(pathTestFixture)
   })
 
   it('js encoding works as expected', async () => {

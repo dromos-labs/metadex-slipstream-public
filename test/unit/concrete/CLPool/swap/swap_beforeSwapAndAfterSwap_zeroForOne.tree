@@ -1,0 +1,34 @@
+UnitCLPool::Swap_beforeSwapAndAfterSwap_zeroForOne
+└── when hook uses beforeSwap and afterSwap
+    └── when pool is unlocked
+        └── when liquidity is positive
+            └── when swap is zeroForOne
+                └── when sqrtPriceLimit is valid
+                    ├── when swap is exactInput
+                    │   ├── it calls swapHook.beforeSwap
+                    │   ├── it computes feeAmount using beforeSwap fee
+                    │   ├── it splits feeAmount between staked and non-staked LPs
+                    │   ├── it sets feeGrowthGlobal0x128 to state.feeGrowthGlobalX128
+                    │   ├── it calls swapHook.afterSwap
+                    │   ├── it decreases amountCalculated by after-swap fee amount
+                    │   ├── it adds after-swap gaugeFee to gaugeFees.token1
+                    │   ├── it adds gaugeFee to gaugeFees.token0
+                    │   ├── it computes amount0 as diff between specified and remaining amounts
+                    │   ├── it sets amount1 as amountCalculated
+                    │   ├── it transfers token1 with amount1 to the recipient
+                    │   ├── it calls uniswapV3SwapCallback on msg.sender
+                    │   └── it emits Swap event
+                    └── when swap is exactOutput
+                        ├── it calls swapHook.beforeSwap
+                        ├── it computes feeAmount using beforeSwap fee
+                        ├── it splits feeAmount between staked and non-staked LPs
+                        ├── it sets feeGrowthGlobal0x128 to state.feeGrowthGlobalX128
+                        ├── it calls swapHook.afterSwap
+                        ├── it increases amountCalculated by after-swap fee amount
+                        ├── it adds after-swap gaugeFee to gaugeFees.token0
+                        ├── it adds gaugeFee to gaugeFees.token0
+                        ├── it sets amount0 as amountCalculated
+                        ├── it computes amount1 as diff between specified and remaining amounts
+                        ├── it transfers token1 with amount1 to the recipient
+                        ├── it calls uniswapV3SwapCallback on msg.sender
+                        └── it emits Swap event

@@ -1,0 +1,49 @@
+UnitMetaquoter::QuoteAddClLiquidityV3
+├── when the pool is not a registered target
+│   └── it reverts with IP
+└── given the pool is a registered target
+    ├── when the target factory is not approved
+    │   └── it reverts with AF
+    └── given the target factory is approved
+        ├── when the pool type is not CL
+        │   └── it reverts with PT
+        └── given the pool type is CL
+            ├── when the lower tick is not below the upper tick
+            │   └── it reverts with TLU
+            ├── when the lower tick is below the minimum tick
+            │   └── it reverts with TLM
+            ├── when the upper tick is above the maximum tick
+            │   └── it reverts with TUM
+            ├── when the lower tick is not aligned to the tick spacing
+            │   └── it reverts with TS
+            ├── when the upper tick is not aligned to the tick spacing
+            │   └── it reverts with TS
+            └── given the tick range is valid
+                ├── when one desired side is zero inside the range
+                │   └── it reverts with ILM
+                ├── when the desired amounts size liquidity above the int128 maximum
+                │   └── it reverts with LTM
+                ├── when the price is inside the range
+                │   ├── it returns the liquidity the position manager would mint
+                │   └── it returns both amounts rounded up at the live price
+                ├── when the amounts are compared to the burn valuation
+                │   └── it returns amounts at most one wei above the rounded down ones
+                ├── when the price is below the range
+                │   ├── it sizes the liquidity from amount0Desired alone
+                │   └── it returns zero as amount1
+                ├── when the price is above the range
+                │   ├── it sizes the liquidity from amount1Desired alone
+                │   └── it returns zero as amount0
+                ├── when the unbounded side is the maximum uint256 below the range
+                │   └── it quotes the bounded side alone
+                ├── when the unbounded side is the maximum uint256 inside the range
+                │   └── it reverts without a reason
+                ├── when the price sits at the upper tick ratio with the tick one below
+                │   └── it returns zero as amount0
+                ├── when the tick is the lower tick with the price inside it
+                │   ├── it returns both amounts rounded up at the live price
+                │   └── it returns both sides nonzero
+                ├── when the tick is the upper tick with the price inside it
+                │   └── it returns zero as amount0
+                └── when the quote is taken at a pinned price and range
+                    └── it returns the amounts the mint callback would pull

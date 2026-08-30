@@ -1,41 +1,54 @@
-// SPDX-License-Identifier: BUSL-1.1
+// SPDX-License-Identifier: LicenseRef-Dromos-Restricted-Use-1.0
 pragma solidity =0.7.6;
 
-import {IFactoryRegistry} from "contracts/core/interfaces/IFactoryRegistry.sol";
-import {EnumerableSet} from "contracts/libraries/EnumerableSet.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {IFactoryRegistry} from 'contracts/core/interfaces/IFactoryRegistry.sol';
+import {ICLGaugeFactory} from 'contracts/gauge/interfaces/ICLGaugeFactory.sol';
+import {EnumerableSet} from 'contracts/libraries/EnumerableSet.sol';
 
 contract MockFactoryRegistry is Ownable, IFactoryRegistry {
-    using EnumerableSet for EnumerableSet.AddressSet;
+  using EnumerableSet for EnumerableSet.AddressSet;
 
-    EnumerableSet.AddressSet private _poolFactories;
+  EnumerableSet.AddressSet private _targetFactories;
 
-    struct FactoriesToPoolFactory {
-        address votingRewardsFactory;
-        address gaugeFactory;
-    }
+  mapping(address => address) private _targetFactoryToGaugeFactory;
 
-    mapping(address => FactoriesToPoolFactory) private _factoriesToPoolsFactory;
+  mapping(address => address) public targetToFactory;
 
-    function approve(address poolFactory, address votingRewardsFactory, address gaugeFactory) public override {
-        require(!_poolFactories.contains(poolFactory));
-        _poolFactories.add(poolFactory);
-        _factoriesToPoolsFactory[poolFactory] =
-            FactoriesToPoolFactory({votingRewardsFactory: votingRewardsFactory, gaugeFactory: gaugeFactory});
-    }
+  mapping(address => address) public override targetToGauge;
 
-    function isPoolFactoryApproved(address poolFactory) external view override returns (bool) {
-        return _poolFactories.contains(poolFactory);
-    }
+  mapping(address => address) public gaugeToFactory;
 
-    function factoriesToPoolFactory(address poolFactory)
-        public
-        view
-        override
-        returns (address votingRewardsFactory, address gaugeFactory)
-    {
-        FactoriesToPoolFactory memory f = _factoriesToPoolsFactory[poolFactory];
-        votingRewardsFactory = f.votingRewardsFactory;
-        gaugeFactory = f.gaugeFactory;
-    }
+  function registerFactories(address gaugeFactory, address targetFactory) public override {
+    require(!_targetFactories.contains(targetFactory));
+    _targetFactories.add(targetFactory);
+    _targetFactoryToGaugeFactory[targetFactory] = gaugeFactory;
+  }
+
+  function isTargetFactoryApproved(address targetFactory) external view override returns (bool) {
+    return _targetFactories.contains(targetFactory);
+  }
+
+  function registerTarget(address target) external override {
+    require(_targetFactories.contains(msg.sender), 'TargetFactoryNotRegistered');
+    require(target != address(0), 'ZeroAddress');
+    require(targetToFactory[target] == address(0), 'TargetAlreadyRecorded');
+    targetToFactory[target] = msg.sender;
+  }
+
+  function registerGauge(address target, address gauge) external {
+    require(targetToGauge[target] == address(0), 'TargetAlreadyLinked');
+    targetToGauge[target] = gauge;
+    gaugeToFactory[gauge] = _targetFactoryToGaugeFactory[targetToFactory[target]];
+  }
+
+  function emissionCap(address gauge) external view override returns (uint128) {
+    address gaugeFactory = gaugeToFactory[gauge];
+    if (gaugeFactory == address(0)) return 0;
+    return ICLGaugeFactory(gaugeFactory).emissionCap(gauge);
+  }
+
+  function targetFactoryToGaugeFactory(address targetFactory) public view override returns (address) {
+    return _targetFactoryToGaugeFactory[targetFactory];
+  }
 }

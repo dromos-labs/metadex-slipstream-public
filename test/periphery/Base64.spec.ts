@@ -1,7 +1,8 @@
-import { ethers } from 'hardhat'
+import { Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
 import { base64Encode } from './shared/base64'
 import { expect } from './shared/expect'
-import { Base64Test } from '../../typechain'
 import { randomBytes } from 'crypto'
 import snapshotGasCost from './shared/snapshotGasCost'
 
@@ -10,9 +11,23 @@ function stringToHex(str: string): string {
 }
 
 describe('Base64', () => {
-  let base64: Base64Test
-  before('deploy test contract', async () => {
-    base64 = (await (await ethers.getContractFactory('Base64Test')).deploy()) as Base64Test
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
+  let base64: Contract
+
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+  })
+
+  const base64Fixture = async () => {
+    const factory = await ethers.getContractFactory('Base64Test')
+    return (await factory.deploy()) as unknown as Contract
+  }
+
+  beforeEach('deploy test contract', async () => {
+    base64 = await networkHelpers.loadFixture(base64Fixture)
   })
 
   describe('#encode', () => {

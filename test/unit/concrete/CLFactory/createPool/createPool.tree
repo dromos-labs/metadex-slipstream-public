@@ -1,0 +1,27 @@
+UnitCLFactory::CreatePool
+├── when tokenA equals tokenB
+│   └── it should revert
+└── when tokenA differs from tokenB
+    ├── when the lower token is the zero address
+    │   └── it should revert
+    └── when the lower token is not the zero address
+        ├── when tickSpacing doesn't correspond to a fee
+        │   └── it should revert
+        └── when tickSpacing corresponds to a valid fee
+            ├── when the pool already exists for the pair
+            │   └── it should revert
+            └── when the pair has no pool yet
+                ├── it should deploy a clone at the predicted deterministic address
+                ├── it should call pool.initialize
+                ├── it should store the pool in the _getPool mapping in both directions
+                ├── it should append the pool to allPools
+                ├── it should mark the pool as a valid pool in _isPools mapping
+                ├── it should push pool keyed by tokenA to poolByTokenIndex
+                ├── it should push pool keyed by tokenB to poolByTokenIndex
+                ├── it should push pool and timestamp to poolsIndex
+                ├── it should add tokenA to tokenIndex
+                ├── it should add tokenB to tokenIndex
+                ├── it should register the pool as a target on the factory registry
+                ├── it should emit PoolCreated
+                └── when the registry registerTarget call reverts
+                    └── it should revert

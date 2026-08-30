@@ -1,0 +1,19 @@
+UnitCLPool::SettleToBlock
+├── when the block timestamp is eq to lastUpdated
+│   └── it should not update any values
+└── when the block timestamp is gt lastUpdated
+    ├── when the gauge address eq zero
+    │   ├── it should not update the lastUpdated
+    │   ├── it should leave the rollover at zero
+    │   └── it should leave the reward growth global at zero
+    └── when the gauge address does not eq zero
+        ├── when the staked liquidity is gt zero
+        │   ├── it should credit the reward growth accumulator with the settled delta
+        │   ├── it should not update the rollover
+        │   └── it should update the lastUpdated
+        ├── when the staked liquidity is eq zero
+        │   ├── it should add the settled delta to the rollover
+        │   ├── it should not update the reward growth accumulator
+        │   └── it should update the lastUpdated
+        └── when the gauge settlement reverts
+            └── it should revert

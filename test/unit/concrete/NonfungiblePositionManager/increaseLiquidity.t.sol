@@ -1,26 +1,46 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity ^0.7.6;
 pragma abicoder v2;
 
-import {INonfungiblePositionManager} from "contracts/periphery/interfaces/INonfungiblePositionManager.sol";
-import "./NonfungiblePositionManager.t.sol";
+import {NonfungiblePositionManagerTest} from './NonfungiblePositionManager.t.sol';
+import {INonfungiblePositionManager} from 'contracts/periphery/interfaces/INonfungiblePositionManager.sol';
 
 contract IncreaseLiquidityTest is NonfungiblePositionManagerTest {
-    function test_RevertIf_CallerIsNotGauge() public {
-        uint256 tokenId = nftCallee.mintNewFullRangePositionForUserWith60TickSpacing(TOKEN_1, TOKEN_1, users.alice);
+  function test_EmitsIncreaseLiquidityWithPositionTicks() public {
+    uint256 tokenId = nftCallee.mintNewFullRangePositionForUserWith60TickSpacing(TOKEN_1, TOKEN_1, users.alice);
 
-        nft.approve(address(gauge), tokenId);
-        gauge.deposit({tokenId: tokenId});
+    vm.expectEmit(address(nft));
+    emit IncreaseLiquidity(
+      tokenId, uint128(TOKEN_1), TOKEN_1, TOKEN_1, getMinTick(TICK_SPACING_60), getMaxTick(TICK_SPACING_60)
+    );
+    nft.increaseLiquidity(
+      INonfungiblePositionManager.IncreaseLiquidityParams({
+        tokenId: tokenId,
+        amount0Desired: TOKEN_1,
+        amount1Desired: TOKEN_1,
+        amount0Min: 0,
+        amount1Min: 0,
+        deadline: block.timestamp
+      })
+    );
+  }
 
-        vm.expectRevert(bytes("NG"));
-        nft.increaseLiquidity(
-            INonfungiblePositionManager.IncreaseLiquidityParams({
-                tokenId: tokenId,
-                amount0Desired: TOKEN_1,
-                amount1Desired: TOKEN_1,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp
-            })
-        );
-    }
+  function test_RevertIf_CallerIsNotGauge() public {
+    uint256 tokenId = nftCallee.mintNewFullRangePositionForUserWith60TickSpacing(TOKEN_1, TOKEN_1, users.alice);
+
+    nft.approve(address(gauge), tokenId);
+    gauge.deposit({_lp: tokenId});
+
+    vm.expectRevert(bytes('NG'));
+    nft.increaseLiquidity(
+      INonfungiblePositionManager.IncreaseLiquidityParams({
+        tokenId: tokenId,
+        amount0Desired: TOKEN_1,
+        amount1Desired: TOKEN_1,
+        amount0Min: 0,
+        amount1Min: 0,
+        deadline: block.timestamp
+      })
+    );
+  }
 }

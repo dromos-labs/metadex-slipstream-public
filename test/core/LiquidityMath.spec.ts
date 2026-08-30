@@ -1,18 +1,28 @@
 import { expect } from './shared/expect'
-import { LiquidityMathTest } from '../../typechain/LiquidityMathTest'
-import { ethers, waffle } from 'hardhat'
+import { Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
 import snapshotGasCost from './shared/snapshotGasCost'
 
-const { BigNumber } = ethers
-
 describe('LiquidityMath', () => {
-  let liquidityMath: LiquidityMathTest
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
+
+  let liquidityMath: Contract
+
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+  })
+
   const fixture = async () => {
     const factory = await ethers.getContractFactory('LiquidityMathTest')
-    return (await factory.deploy()) as LiquidityMathTest
+    return (await factory.deploy()) as unknown as Contract
   }
+
   beforeEach('deploy LiquidityMathTest', async () => {
-    liquidityMath = await waffle.loadFixture(fixture)
+    liquidityMath = await networkHelpers.loadFixture(fixture)
   })
 
   describe('#addDelta', () => {
@@ -26,7 +36,7 @@ describe('LiquidityMath', () => {
       expect(await liquidityMath.addDelta(1, 1)).to.eq(2)
     })
     it('2**128-15 + 15 overflows', async () => {
-      await expect(liquidityMath.addDelta(BigNumber.from(2).pow(128).sub(15), 15)).to.be.revertedWith('LA')
+      await expect(liquidityMath.addDelta(2n ** 128n - 15n, 15)).to.be.revertedWith('LA')
     })
     it('0 + -1 underflows', async () => {
       await expect(liquidityMath.addDelta(0, -1)).to.be.revertedWith('LS')

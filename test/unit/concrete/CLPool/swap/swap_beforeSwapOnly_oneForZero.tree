@@ -1,0 +1,28 @@
+UnitCLPool::Swap_beforeSwapOnly_oneForZero
+└── when hook uses beforeSwap only
+    └── when pool is unlocked
+        └── when liquidity is positive
+            └── when swap is oneForZero
+                └── when sqrtPriceLimit is valid
+                    ├── when swap is exactInput
+                    │   ├── it calls swapHook.beforeSwap
+                    │   ├── it computes feeAmount using beforeSwap fee
+                    │   ├── it splits feeAmount between staked and non-staked LPs
+                    │   ├── it sets feeGrowthGlobal1X128 to state.feeGrowthGlobalX128
+                    │   ├── it adds gaugeFee to gaugeFees.token1
+                    │   ├── it sets amount0 as amountCalculated
+                    │   ├── it computes amount1 as diff between specified and remaining amounts
+                    │   ├── it transfers token0 with amount0 to the recipient
+                    │   ├── it calls uniswapV3SwapCallback on msg.sender
+                    │   └── it emits Swap event
+                    └── when swap is exactOutput
+                        ├── it calls swapHook.beforeSwap
+                        ├── it computes feeAmount using beforeSwap fee
+                        ├── it splits feeAmount between staked and non-staked LPs
+                        ├── it sets feeGrowthGlobal1x128 to state.feeGrowthGlobalX128
+                        ├── it adds gaugeFee to gaugeFees.token1
+                        ├── it computes amount0 as diff between specified and remaining amounts
+                        ├── it sets amount1 as amountCalculated
+                        ├── it transfers token0 with amount0 to the recipient
+                        ├── it calls uniswapV3SwapCallback on msg.sender
+                        └── it emits Swap event

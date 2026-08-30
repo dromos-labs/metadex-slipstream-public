@@ -1,0 +1,13 @@
+UnitCLPool::SwapBase
+├── when amountSpecified eq zero
+│   └── it reverts with AS
+└── when amountSpecified doesn't eq zero
+    ├── when pool is locked
+    │   └── it reverts with LOK
+    └── when pool is unlocked
+        ├── when swap is zeroForOne
+        │   └── when sqrtPriceLimit geq current sqrtPrice or leq MIN_SQRT_RATIO
+        │       └── it reverts with SPL
+        └── when swap is oneForZero
+            └── when sqrtPriceLimit leq current sqrtPrice or geq MAX_SQRT_RATIO
+                └── it reverts with SPL

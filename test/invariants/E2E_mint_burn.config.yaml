@@ -15,4 +15,4 @@ filterFunctions:
     'E2E_mint_burn.viewBurnRandomPositionBurnAmount(uint128,uint128)',
   ]
 
-cryticArgs: ["--solc-args=--optimize", "--solc-remaps", "@openzeppelin/=lib/openzeppelin-contracts/ @uniswap/=lib/solidity-lib/ base64-sol/=lib/base64/"]
+cryticArgs: ["--solc-args=--optimize", "--solc-remaps", "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/ @uniswap/lib/=node_modules/@uniswap/lib/ @nomad-xyz/excessively-safe-call/=node_modules/@nomad-xyz/excessively-safe-call/ base64-sol/=node_modules/base64-sol/"]

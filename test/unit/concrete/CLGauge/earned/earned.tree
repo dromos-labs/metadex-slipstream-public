@@ -1,14 +1,48 @@
-EarnedConcreteUnitTest
-├── When the caller is not the token owner
-│   └── It should revert with {NA}
-└── When the caller is the token owner
-    ├── When there are no claimable rewards
-    │   └── It should return zero
-    └── When there are claimable rewards
-        ├── When penalty rate is zero
-        │   └── It should return full rewards
-        └── When penalty rate is greater than zero
-            ├── When called within min stake time
-            │   └── It should return rewards minus penalty
-            └── When called after min stake time
-                └── It should return full rewards
+UnitCLGauge::Earned
+└── when calculating selected positions
+    ├── when no positions are requested
+    │   ├── when the account has no deferred LP emissions
+    │   │   └── it should return zero
+    │   └── when the account has deferred LP emissions
+    │       └── it should return the full deferred balance
+    ├── when calculating one position
+    │   ├── when the token id is not staked by the account
+    │   │   └── it should revert with NA
+    │   └── when the position is staked by the account
+    │       ├── when the position has no accrued emissions
+    │       │   └── it should return zero
+    │       ├── when the position has accrued emissions
+    │       │   ├── when there is no penalty and no referral
+    │       │   │   ├── when the reward growth is known
+    │       │   │   │   ├── it should return full emissions
+    │       │   │   │   └── it should align claimed emissions with earned
+    │       │   │   └── when the reward growth varies
+    │       │   │       ├── it should return full emissions
+    │       │   │       └── it should align claimed emissions with earned
+    │       │   ├── when there is a penalty rate
+    │       │   │   ├── when called within min stake blocks
+    │       │   │   │   └── it should return emissions after penalty
+    │       │   │   └── when called after min stake blocks
+    │       │   │       └── it should return full emissions
+    │       │   ├── when there is a referral share
+    │       │   │   └── it should return emissions after referral
+    │       │   └── when there is a penalty rate and a referral share
+    │       │       ├── when the voter has no new cumulative reward share
+    │       │       │   ├── it should apply the penalty before the referral
+    │       │       │   └── it should return emissions after penalty and referral
+    │       │       └── when the voter has a new cumulative reward share
+    │       │           ├── it should include the projected reward share
+    │       │           ├── it should apply the penalty before the referral
+    │       │           └── it should return emissions after penalty and referral
+    │       ├── when the voter projects a lower cumulative reward share
+    │       │   └── it should ignore the regressed projection
+    │       └── when the pool has no staked liquidity
+    │           └── it should return settled emissions without projecting the reward share
+    ├── when calculating multiple selected positions
+    │   └── it should return selected and deferred LP emissions
+    └── when calculating all staked positions
+        ├── when the account has no staked positions or deferred emissions
+        │   └── it should return zero
+        └── when the account has multiple staked positions
+            ├── it should return live and deferred LP emissions
+            └── it should apply the early withdrawal penalty only to live emissions

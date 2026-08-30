@@ -1,0 +1,13 @@
+CLGaugePendingFeesConcreteUnitTest
+├── When the gauge has no corresponding pool
+│   └── It should return zero amounts
+├── When the gauge is not activated
+│   └── It should return zero amounts
+├── When the emission cap is zero
+│   └── It should return zero amounts
+├── When gauge fees are zero
+│   └── It should return zero amounts
+├── When gauge fees are one wei
+│   └── It should return zero amounts
+└── When gauge fees are greater than one wei
+    └── It should subtract the retained wei

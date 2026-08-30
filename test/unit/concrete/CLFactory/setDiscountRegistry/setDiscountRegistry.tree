@@ -1,0 +1,9 @@
+UnitCLFactory::SetDiscountRegistry
+├── when caller isn't discount registry manager
+│   └── it reverts with NotDiscountRegistryManager
+└── when caller is discount registry manager
+    ├── when new discount registry is address zero
+    │   └── it reverts with DiscountRegistryIsZero
+    └── when new discount registry isn't address zero
+        ├── it sets discountRegistry to new discountRegistry
+        └── it emits DiscountRegistryChanged

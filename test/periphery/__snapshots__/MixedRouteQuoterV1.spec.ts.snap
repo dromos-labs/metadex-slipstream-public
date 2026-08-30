@@ -1,27 +1,27 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 -> 1 1`] = `369381`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 -> 1 1`] = `374311`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 0 tick, starting tick initialized 1`] = `169547`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 0 tick, starting tick initialized 1`] = `170698`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 0 tick, starting tick not initialized 1`] = `138181`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 0 tick, starting tick not initialized 1`] = `142392`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 1 tick 1`] = `198697`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 1 tick 1`] = `199418`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 2 tick 1`] = `245101`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 2 tick 1`] = `245393`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 2 tick where after is initialized 1`] = `198735`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 0 -> 2 cross 2 tick where after is initialized 1`] = `199456`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 0 cross 0 tick, starting tick initialized 1`] = `127109`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 0 cross 0 tick, starting tick initialized 1`] = `131759`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 0 cross 0 tick, starting tick not initialized 1`] = `127109`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 0 cross 0 tick, starting tick not initialized 1`] = `131759`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 0 cross 2 1`] = `233847`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 0 cross 2 1`] = `234589`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 0 cross 2 where tick after is initialized 1`] = `233855`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 0 cross 2 where tick after is initialized 1`] = `234597`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 1 1`] = `126784`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInput V3 only 2 -> 1 1`] = `131422`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInputSingle V3 0 -> 2 1`] = `245083`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInputSingle V3 0 -> 2 1`] = `245375`;
 
-exports[`MixedRouteQuoterV1 quotes #quoteExactInputSingle V3 2 -> 0 1`] = `233819`;
+exports[`MixedRouteQuoterV1 quotes #quoteExactInputSingle V3 2 -> 0 1`] = `234561`;

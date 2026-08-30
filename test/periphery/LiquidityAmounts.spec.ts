@@ -1,16 +1,29 @@
-import { ethers } from 'hardhat'
-import { LiquidityAmountsTest } from '../../typechain/LiquidityAmountsTest'
+import { Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
 import { encodePriceSqrt } from './shared/encodePriceSqrt'
 import { expect } from './shared/expect'
 
 import snapshotGasCost from './shared/snapshotGasCost'
 
 describe('LiquidityAmounts', async () => {
-  let liquidityFromAmounts: LiquidityAmountsTest
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
+  let liquidityFromAmounts: Contract
 
-  before('deploy test library', async () => {
-    const liquidityFromAmountsTestFactory = await ethers.getContractFactory('LiquidityAmountsTest')
-    liquidityFromAmounts = (await liquidityFromAmountsTestFactory.deploy()) as LiquidityAmountsTest
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+  })
+
+  const liquidityAmountsFixture = async () => {
+    const factory = await ethers.getContractFactory('LiquidityAmountsTest')
+    return (await factory.deploy()) as unknown as Contract
+  }
+
+  beforeEach('deploy test library', async () => {
+    liquidityFromAmounts = await networkHelpers.loadFixture(liquidityAmountsFixture)
   })
 
   describe('#getLiquidityForAmount0', () => {

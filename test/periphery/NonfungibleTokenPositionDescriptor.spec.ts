@@ -1,13 +1,12 @@
-import { constants, Wallet } from 'ethers'
-import { waffle, ethers } from 'hardhat'
+import { Contract, MaxUint256 } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
 import { expect } from './shared/expect'
-import { Fixture } from 'ethereum-waffle'
-import { NonfungibleTokenPositionDescriptor, MockTimeNonfungiblePositionManager, TestERC20 } from '../../typechain'
 import completeFixture from './shared/completeFixture'
 import { encodePriceSqrt } from './shared/encodePriceSqrt'
 import { FeeAmount, TICK_SPACINGS } from './shared/constants'
 import { getMaxTick, getMinTick } from './shared/ticks'
-import { sortedTokens } from './shared/tokenSort'
 import { extractJSONFromURI } from './shared/extractJSONFromURI'
 
 const DAI = '0x6B175474E89094C44Da98b954EedeAC495271d0F'
@@ -17,21 +16,28 @@ const TBTC = '0x8dAEBADE922dF735c38C80C7eBD708Af50815fAa'
 const WBTC = '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599'
 
 describe('NonfungibleTokenPositionDescriptor', () => {
-  let wallets: Wallet[]
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
 
-  const nftPositionDescriptorCompleteFixture: Fixture<{
-    nftPositionDescriptor: NonfungibleTokenPositionDescriptor
-    tokens: [TestERC20, TestERC20, TestERC20]
-    nft: MockTimeNonfungiblePositionManager
-  }> = async (wallets, provider) => {
-    const { factory, nft, router, nftDescriptor } = await completeFixture(wallets, provider)
-    const tokenFactory = await ethers.getContractFactory('TestERC20')
-    const tokens: [TestERC20, TestERC20, TestERC20] = [
-      (await tokenFactory.deploy(constants.MaxUint256.div(2))) as TestERC20, // do not use maxu256 to avoid overflowing
-      (await tokenFactory.deploy(constants.MaxUint256.div(2))) as TestERC20,
-      (await tokenFactory.deploy(constants.MaxUint256.div(2))) as TestERC20,
-    ]
-    tokens.sort((a, b) => (a.address.toLowerCase() < b.address.toLowerCase() ? -1 : 1))
+  let wallet: HardhatEthersSigner
+
+  let nftPositionDescriptor: Contract
+  // tokens[0] acts as "weth9" for the descriptor (set in externalFixtures)
+  let tokens: [Contract, Contract, Contract]
+  let nft: Contract
+  // weth9Token = tokens[0] (the address that nftDescriptor.WETH9() returns)
+  let weth9Token: Contract
+  let weth9Addr: string
+
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+    ;[wallet] = await ethers.getSigners()
+  })
+
+  const nftPositionDescriptorCompleteFixture = async () => {
+    const { nft, nftDescriptor, tokens } = await completeFixture(ethers, wallet)
 
     return {
       nftPositionDescriptor: nftDescriptor,
@@ -40,28 +46,16 @@ describe('NonfungibleTokenPositionDescriptor', () => {
     }
   }
 
-  let nftPositionDescriptor: NonfungibleTokenPositionDescriptor
-  let tokens: [TestERC20, TestERC20, TestERC20]
-  let nft: MockTimeNonfungiblePositionManager
-  let weth9: TestERC20
-
-  let loadFixture: ReturnType<typeof waffle.createFixtureLoader>
-
-  before('create fixture loader', async () => {
-    wallets = await (ethers as any).getSigners()
-
-    loadFixture = waffle.createFixtureLoader(wallets)
-  })
-
   beforeEach('load fixture', async () => {
-    ;({ tokens, nft, nftPositionDescriptor } = await loadFixture(nftPositionDescriptorCompleteFixture))
-    const tokenFactory = await ethers.getContractFactory('TestERC20')
-    weth9 = tokenFactory.attach(await nftPositionDescriptor.WETH9()) as TestERC20
+    ;({ tokens, nft, nftPositionDescriptor } = await networkHelpers.loadFixture(nftPositionDescriptorCompleteFixture))
+    // The descriptor was deployed with tokens[0] as the WETH9 address
+    weth9Addr = await nftPositionDescriptor.WETH9()
+    weth9Token = tokens[0]
   })
 
   describe('#tokenRatioPriority', () => {
     it('returns -100 for WETH9', async () => {
-      expect(await nftPositionDescriptor.tokenRatioPriority(weth9.address, 1)).to.eq(-100)
+      expect(await nftPositionDescriptor.tokenRatioPriority(weth9Addr, 1)).to.eq(-100)
     })
 
     it('returns 200 for USDC', async () => {
@@ -85,13 +79,15 @@ describe('NonfungibleTokenPositionDescriptor', () => {
     })
 
     it('returns 0 for any non-ratioPriority token', async () => {
-      expect(await nftPositionDescriptor.tokenRatioPriority(tokens[0].address, 1)).to.eq(0)
+      expect(await nftPositionDescriptor.tokenRatioPriority(await tokens[1].getAddress(), 1)).to.eq(0)
     })
   })
 
   describe('#flipRatio', () => {
     it('returns false if neither token has priority ordering', async () => {
-      expect(await nftPositionDescriptor.flipRatio(tokens[0].address, tokens[2].address, 1)).to.eq(false)
+      expect(
+        await nftPositionDescriptor.flipRatio(await tokens[1].getAddress(), await tokens[2].getAddress(), 1)
+      ).to.eq(false)
     })
 
     it('returns true if both tokens are numerators but token0 has a higher priority ordering', async () => {
@@ -99,7 +95,7 @@ describe('NonfungibleTokenPositionDescriptor', () => {
     })
 
     it('returns true if both tokens are denominators but token1 has lower priority ordering', async () => {
-      expect(await nftPositionDescriptor.flipRatio(weth9.address, WBTC, 1)).to.eq(true)
+      expect(await nftPositionDescriptor.flipRatio(weth9Addr, WBTC, 1)).to.eq(true)
     })
 
     it('returns true if token0 is a numerator and token1 is a denominator', async () => {
@@ -113,22 +109,21 @@ describe('NonfungibleTokenPositionDescriptor', () => {
 
   describe('#tokenURI', () => {
     it('displays ETH as token symbol for WETH token', async () => {
-      const [token0, token1] = sortedTokens(weth9, tokens[1])
-      await nft.createPoolFromFactory(
-        token0.address,
-        token1.address,
-        TICK_SPACINGS[FeeAmount.MEDIUM],
-        encodePriceSqrt(1, 1)
-      )
-      await weth9.approve(nft.address, 100)
-      await tokens[1].approve(nft.address, 100)
+      // weth9Token = tokens[0] is the "weth9" in the descriptor
+      const token1Addr = await tokens[1].getAddress()
+      const [addr0, addr1] =
+        weth9Addr.toLowerCase() < token1Addr.toLowerCase() ? [weth9Addr, token1Addr] : [token1Addr, weth9Addr]
+
+      await nft.createPoolFromFactory(addr0, addr1, TICK_SPACINGS[FeeAmount.MEDIUM], encodePriceSqrt(1, 1))
+      await weth9Token.approve(await nft.getAddress(), 100)
+      await tokens[1].approve(await nft.getAddress(), 100)
       await nft.mint({
-        token0: token0.address,
-        token1: token1.address,
+        token0: addr0,
+        token1: addr1,
         tickSpacing: TICK_SPACINGS[FeeAmount.MEDIUM],
         tickLower: getMinTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
         tickUpper: getMaxTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
-        recipient: wallets[0].address,
+        recipient: wallet.address,
         amount0Desired: 100,
         amount1Desired: 100,
         amount0Min: 0,
@@ -144,22 +139,21 @@ describe('NonfungibleTokenPositionDescriptor', () => {
     })
 
     it('displays returned token symbols when neither token is WETH ', async () => {
-      const [token0, token1] = sortedTokens(tokens[2], tokens[1])
-      await nft.createPoolFromFactory(
-        token0.address,
-        token1.address,
-        TICK_SPACINGS[FeeAmount.MEDIUM],
-        encodePriceSqrt(1, 1)
-      )
-      await tokens[1].approve(nft.address, 100)
-      await tokens[2].approve(nft.address, 100)
+      const token1Addr = await tokens[1].getAddress()
+      const token2Addr = await tokens[2].getAddress()
+      const [addr0, addr1] =
+        token2Addr.toLowerCase() < token1Addr.toLowerCase() ? [token2Addr, token1Addr] : [token1Addr, token2Addr]
+
+      await nft.createPoolFromFactory(addr0, addr1, TICK_SPACINGS[FeeAmount.MEDIUM], encodePriceSqrt(1, 1))
+      await tokens[1].approve(await nft.getAddress(), 100)
+      await tokens[2].approve(await nft.getAddress(), 100)
       await nft.mint({
-        token0: token0.address,
-        token1: token1.address,
+        token0: addr0,
+        token1: addr1,
         tickSpacing: TICK_SPACINGS[FeeAmount.MEDIUM],
         tickLower: getMinTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
         tickUpper: getMaxTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
-        recipient: wallets[0].address,
+        recipient: wallet.address,
         amount0Desired: 100,
         amount1Desired: 100,
         amount0Min: 0,
@@ -174,22 +168,20 @@ describe('NonfungibleTokenPositionDescriptor', () => {
     })
 
     it('can render a different label for native currencies', async () => {
-      const [token0, token1] = sortedTokens(weth9, tokens[1])
-      await nft.createPoolFromFactory(
-        token0.address,
-        token1.address,
-        TICK_SPACINGS[FeeAmount.MEDIUM],
-        encodePriceSqrt(1, 1)
-      )
-      await weth9.approve(nft.address, 100)
-      await tokens[1].approve(nft.address, 100)
+      const token1Addr = await tokens[1].getAddress()
+      const [addr0, addr1] =
+        weth9Addr.toLowerCase() < token1Addr.toLowerCase() ? [weth9Addr, token1Addr] : [token1Addr, weth9Addr]
+
+      await nft.createPoolFromFactory(addr0, addr1, TICK_SPACINGS[FeeAmount.MEDIUM], encodePriceSqrt(1, 1))
+      await weth9Token.approve(await nft.getAddress(), 100)
+      await tokens[1].approve(await nft.getAddress(), 100)
       await nft.mint({
-        token0: token0.address,
-        token1: token1.address,
+        token0: addr0,
+        token1: addr1,
         tickSpacing: TICK_SPACINGS[FeeAmount.MEDIUM],
         tickLower: getMinTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
         tickUpper: getMaxTick(TICK_SPACINGS[FeeAmount.MEDIUM]),
-        recipient: wallets[0].address,
+        recipient: wallet.address,
         amount0Desired: 100,
         amount1Desired: 100,
         amount0Min: 0,
@@ -204,17 +196,17 @@ describe('NonfungibleTokenPositionDescriptor', () => {
       const nftSVGLibrary = await nftSVGLibraryFactory.deploy()
       const positionDescriptorFactory = await ethers.getContractFactory('NonfungibleTokenPositionDescriptor', {
         libraries: {
-          NFTDescriptor: nftDescriptorLibrary.address,
-          NFTSVG: nftSVGLibrary.address,
+          NFTDescriptor: await nftDescriptorLibrary.getAddress(),
+          NFTSVG: await nftSVGLibrary.getAddress(),
         },
       })
       const nftDescriptor = (await positionDescriptorFactory.deploy(
-        weth9.address,
+        weth9Addr,
         // 'FUNNYMONEY' as a bytes32 string
         '0x46554e4e594d4f4e455900000000000000000000000000000000000000000000'
-      )) as NonfungibleTokenPositionDescriptor
+      )) as unknown as Contract
 
-      const metadata = extractJSONFromURI(await nftDescriptor.tokenURI(nft.address, 1))
+      const metadata = extractJSONFromURI(await nftDescriptor.tokenURI(await nft.getAddress(), 1))
       expect(metadata.name).to.match(/(\sFUNNYMONEY\/TEST|TEST\/FUNNYMONEY)/)
       expect(metadata.description).to.match(/(TEST-FUNNYMONEY|\sFUNNYMONEY-TEST)/)
       expect(metadata.description).to.match(/(\nFUNNYMONEY\sAddress)/)

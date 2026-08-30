@@ -1,0 +1,9 @@
+UnitCLFactory::SetPoolSwapHook
+├── when caller isn't swap fee manager
+│   └── it reverts with NotSwapFeeManager
+└── when caller is swap fee manager
+    ├── when pools and swap hooks lengths mismatch
+    │   └── it reverts with LMM
+    └── when pools and swap hooks lengths match
+        ├── it sets each pool poolSwapHook to its swap hook
+        └── it emits PoolSwapHookChanged per pool

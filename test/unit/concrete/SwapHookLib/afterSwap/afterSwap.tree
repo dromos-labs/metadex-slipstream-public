@@ -1,0 +1,23 @@
+UnitSwapHookLib::AfterSwap
+├── when swapHook is address zero
+│   └── it skips writing to gaugeFees
+└── when swapHook isn't address zero
+    ├── when call fails
+    │   └── it skips writing to gaugeFees
+    ├── when call succeeds but fee is gt fee ceil
+    │   └── it writes to gaugeFees using _SWAP_FEE_CEIL
+    └── when call succeeds and fee is leq fee ceil
+        ├── when amountSpecified is gt zero
+        │   ├── when swap is zeroForOne and exactInput
+        │   │   ├── it decreases SwapState.amountCalculated by fee amount
+        │   │   └── it increases gaugeFees.token1 by fee amount
+        │   └── when swap is oneForZero and exactInput
+        │       ├── it decreases SwapState.amountCalculated by fee amount
+        │       └── it increases gaugeFees.token0 by fee amount
+        └── when amountSpecified is lt zero
+            ├── when swap is zeroForOne and exactOutput
+            │   ├── it increases SwapState.amountCalculated by fee amount
+            │   └── it increases gaugeFees.token0 by fee amount
+            └── when swap is oneForZero and exactOutput
+                ├── it increases SwapState.amountCalculated by fee amount
+                └── it increases gaugeFees.token1 by fee amount

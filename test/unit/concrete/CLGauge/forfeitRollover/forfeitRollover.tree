@@ -1,0 +1,7 @@
+ForfeitRolloverConcreteUnitTest
+├── When the pool reports no rollover
+│   ├── It should settle the pool
+│   └── It should not forfeit emissions
+└── When the pool reports a rollover
+    ├── It should settle the pool
+    └── It should forfeit the rollover to the LeafVoter

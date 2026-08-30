@@ -1,0 +1,17 @@
+UnitCLFactory::Constructor
+├── when owner is address zero
+│   └── it reverts with OwnerIsZero
+├── when swapFeeManager is address zero
+│   └── it reverts with SwapFeeManagerIsZero
+├── when unstakedFeeManager is address zero
+│   └── it reverts with UnstakedFeeManagerIsZero
+├── when poolImplementation is address zero
+│   └── it reverts with PoolImplementationIsZero
+├── when factoryRegistry is address zero
+│   └── it reverts with FactoryRegistryIsZero
+├── when discountRegistryManager is address zero
+│   └── it reverts with DiscountRegistryManagerIsZero
+├── when clPoolTapeManager is address zero
+│   └── it reverts with ClPoolTapeManagerIsZero
+└── when all parameters are valid
+    └── it sets the factoryRegistry

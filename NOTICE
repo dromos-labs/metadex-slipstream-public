@@ -1,58 +1,77 @@
-This product bundles the CLGauge implementation which is available under the
-BUSL 1.1 license. For details, see
-* contracts/gauge/CLGauge.sol
-* contracts/gauge/CLGaugeFactory.sol
-* LICENSE
+NOTICE — metadex-slipstream
 
-This product bundles the Uniswap v3 core and periphery implementations which
-are available under the GNU General Public License v3.0. For details, see
-* contracts/core
-* contracts/periphery
-* lib/solidity-lib
-* contracts/core/LICENSE
-* contracts/periphery/LICENSE
-* lib/solidity-lib/LICENSE
+Copyright (c) 2026 Perpetual Cyclist Services LLC
 
+This repository contains project code under multiple licenses. Each project
+source file declares its governing license in an SPDX-License-Identifier
+header. Full license texts for project code are provided at the repository
+root:
 
-This product bundles the FullMath library which is available under the MIT
-license. For details, see
-* contracts/core/libraries/FullMath.sol
-* contracts/core/libraries/LICENSE_MIT
+  LICENSE       Dromos Restricted Use License 1.0
+                (SPDX: LicenseRef-Dromos-Restricted-Use-1.0)
+  LICENSE.GPL2  GNU General Public License v2.0
+  LICENSE.MIT   MIT License
 
+Files authored by Perpetual Cyclist Services LLC are provided under the
+Dromos Restricted Use License 1.0 unless their header states otherwise.
+Vendored dependency license texts are provided alongside their source and
+identified below.
 
-This product bundles interfaces for external smart contracts which are
-available under the MIT License. For details, see
-* contracts/core/interfaces/fees
-* contracts/core/interfaces/IFactoryRegistry.sol
-* contracts/core/interfaces/IMinter.sol
-* contracts/core/interfaces/IPool.sol
-* contracts/core/interfaces/IPoolFactory.sol
-* contracts/core/interfaces/IVoter.sol
-* contracts/core/interfaces/IVotingEscrow.sol
-* contracts/gauge/interfaces/
-* contracts/periphery/lens/CLInterfaceMulticall.sol
-* LICENSE.MIT
+----------------------------------------------------------------------
+Third-party notices
+----------------------------------------------------------------------
 
+OpenZeppelin Contracts
+Copyright (c) OpenZeppelin and contributors
 
-This product bundles the VelodromeTimeLibrary library which is available under
-the MIT License. For details, see
-* contracts/libraries/VelodromeTimeLibrary.sol
-* LICENSE.MIT
+Portions of contracts/libraries/EnumerableSet.sol and
+contracts/periphery/libraries/HexStrings.sol are derived from OpenZeppelin
+Contracts, published under the MIT License.
 
+Uniswap V3 Core Periphery
+Copyright (c) 2021 Uniswap Labs
 
-This product bundles the TokenRatioSortOrder library which is available under
-the MIT License. For details, see
-* contracts/periphery/libraries/TokenRatioSortOrder.sol
-* LICENSE.MIT
+Portions of contracts/core and contracts/periphery are derived
+from Uniswap V3 Core (https://github.com/Uniswap/v3-core) and Uniswap V3
+Periphery (https://github.com/Uniswap/v3-periphery). Uniswap V3 was
+originally released under the Business Source License 1.1; pursuant to that
+license's Change License and Change Date, it has been available under the
+GNU General Public License v2.0 or later since 2023-04-01. The derived
+files are redistributed here under GPL-2.0-or-later, as marked in their
+headers.
 
+----------------------------------------------------------------------
+Package-managed dependencies
+----------------------------------------------------------------------
 
-This product bundles the Base64 library which is available under
-the MIT License. For details, see
-* lib/base64
+The following dependencies are installed via the package manager and are
+not vendored in this repository. Solidity imports resolve them from
+node_modules where referenced:
 
+  OpenZeppelin Contracts (@openzeppelin/contracts) 3.4.2-solc-0.7
+    MIT License
+  Uniswap Solidity Lib (@uniswap/lib) 4.0.1-alpha
+    GPL-3.0-or-later; Copyright Uniswap Labs
+  ExcessivelySafeCall (@nomad-xyz/excessively-safe-call) 0.0.1-rc.1
+    MIT OR Apache-2.0; Copyright Illusory Systems Inc.
+  Base64 (base64-sol) 1.1.0
+    MIT License; Copyright (c) Brecht Devos
 
-This product bundles the OpenZeppelin library which is available under
-the MIT license. For details, see
-* contracts/libraries/EnumerableSet.sol
-* contracts/periphery/libraries/HexStrings.sol
-* lib/openzeppelin-contracts
+----------------------------------------------------------------------
+Vendored development dependencies
+----------------------------------------------------------------------
+
+Forge Standard Library (Forge Std) 1.9.4 is vendored under lib/forge-std
+and used by Foundry tests and deployment scripts. It is not imported by
+production contracts.
+
+  Forge Std 1.9.4 — MIT OR Apache-2.0
+    Copyright Contributors to Forge Standard Library
+    Full license texts: lib/forge-std/LICENSE-MIT and
+    lib/forge-std/LICENSE-APACHE
+
+The vendored Forge Std source tree includes legacy DS-Test sources under
+lib/forge-std/lib/ds-test. Those sources are not imported by this project.
+
+  DS-Test — GPL-3.0-or-later
+    Full license text: lib/forge-std/lib/ds-test/LICENSE

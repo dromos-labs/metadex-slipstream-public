@@ -12,37 +12,15 @@ jobs:
     strategy:
       fail-fast: true
 
-    name: Foundry project
+    name: Run Gas Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+          persist-credentials: false
 
-      - id: yarn-cache
-        run: echo "::set-output name=dir::$(yarn cache dir)"
-
-      - uses: actions/cache@v4
-        with:
-          path: ${{ steps.yarn-cache.outputs.dir }}
-          key: yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            yarn-
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-  
-      # Runs a single command using the runners shell
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: v1.0.0
-  
-      - name: Install deps
-        run: forge install
+      - name: install-tools
+        uses: ./.github/workflows/install-tools
 
       - name: Run Forge tests
         run: |

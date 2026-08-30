@@ -1,9 +1,9 @@
-import { BigNumber, constants, Wallet } from 'ethers'
 import { encodePriceSqrt } from './shared/encodePriceSqrt'
-import { waffle, ethers } from 'hardhat'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
+import { Contract } from 'ethers'
 import { expect } from './shared/expect'
-import { TestERC20Metadata, NFTDescriptorTest } from '../../typechain'
-import { Fixture } from 'ethereum-waffle'
 import { FeeAmount, TICK_SPACINGS } from './shared/constants'
 import snapshotGasCost from './shared/snapshotGasCost'
 import { formatSqrtRatioX96 } from './shared/formatSqrtRatioX96'
@@ -14,17 +14,26 @@ import fs from 'fs'
 import isSvg from 'is-svg'
 import { expandTo18Decimals } from './shared/expandTo18Decimals'
 
-const TEN = BigNumber.from(10)
-const LOWEST_SQRT_RATIO = 4310618292
-const HIGHEST_SQRT_RATIO = BigNumber.from(33849).mul(TEN.pow(34))
+const LOWEST_SQRT_RATIO = 4310618292n
+const HIGHEST_SQRT_RATIO = 33849n * 10n ** 34n
 
 describe('NFTDescriptor', () => {
-  let wallets: Wallet[]
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
 
-  const nftDescriptorFixture: Fixture<{
-    tokens: [TestERC20Metadata, TestERC20Metadata, TestERC20Metadata, TestERC20Metadata]
-    nftDescriptor: NFTDescriptorTest
-  }> = async (wallets, provider) => {
+  let wallet: HardhatEthersSigner
+
+  let nftDescriptor: Contract
+  let tokens: [Contract, Contract, Contract, Contract]
+
+  before('create fixture loader', async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+    ;[wallet] = await ethers.getSigners()
+  })
+
+  const nftDescriptorFixture = async () => {
     const nftDescriptorLibraryFactory = await ethers.getContractFactory('NFTDescriptor')
     const nftDescriptorLibrary = await nftDescriptorLibraryFactory.deploy()
     const nftSVGLibraryFactory = await ethers.getContractFactory('NFTSVG')
@@ -33,38 +42,34 @@ describe('NFTDescriptor', () => {
     const tokenFactory = await ethers.getContractFactory('TestERC20Metadata')
     const NFTDescriptorFactory = await ethers.getContractFactory('NFTDescriptorTest', {
       libraries: {
-        NFTDescriptor: nftDescriptorLibrary.address,
-        NFTSVG: nftSVGLibrary.address,
+        NFTDescriptor: await nftDescriptorLibrary.getAddress(),
+        NFTSVG: await nftSVGLibrary.getAddress(),
       },
     })
-    const nftDescriptor = (await NFTDescriptorFactory.deploy()) as NFTDescriptorTest
-    const TestERC20Metadata = tokenFactory.deploy(constants.MaxUint256.div(2), 'Test ERC20', 'TEST1')
-    const tokens: [TestERC20Metadata, TestERC20Metadata, TestERC20Metadata, TestERC20Metadata] = [
-      (await tokenFactory.deploy(constants.MaxUint256.div(2), 'Test ERC20', 'TEST1')) as TestERC20Metadata, // do not use maxu256 to avoid overflowing
-      (await tokenFactory.deploy(constants.MaxUint256.div(2), 'Test ERC20', 'TEST2')) as TestERC20Metadata,
-      (await tokenFactory.deploy(constants.MaxUint256.div(2), 'Test ERC20', 'TEST3')) as TestERC20Metadata,
-      (await tokenFactory.deploy(constants.MaxUint256.div(2), 'Test ERC20', 'TEST4')) as TestERC20Metadata,
+    const nftDescriptor = (await NFTDescriptorFactory.deploy()) as unknown as Contract
+    const tokens: [Contract, Contract, Contract, Contract] = [
+      (await tokenFactory.deploy(2n ** 255n - 1n, 'Test ERC20', 'TEST1')) as unknown as Contract,
+      (await tokenFactory.deploy(2n ** 255n - 1n, 'Test ERC20', 'TEST2')) as unknown as Contract,
+      (await tokenFactory.deploy(2n ** 255n - 1n, 'Test ERC20', 'TEST3')) as unknown as Contract,
+      (await tokenFactory.deploy(2n ** 255n - 1n, 'Test ERC20', 'TEST4')) as unknown as Contract,
     ]
-    tokens.sort((a, b) => (a.address.toLowerCase() < b.address.toLowerCase() ? -1 : 1))
+    const addrs = await Promise.all(tokens.map((t) => t.getAddress()))
+    const sorted = tokens
+      .map((t, i) => ({ t, addr: addrs[i] }))
+      .sort((a, b) => (a.addr.toLowerCase() < b.addr.toLowerCase() ? -1 : 1))
+    tokens[0] = sorted[0].t
+    tokens[1] = sorted[1].t
+    tokens[2] = sorted[2].t
+    tokens[3] = sorted[3].t
+
     return {
       nftDescriptor,
       tokens,
     }
   }
 
-  let nftDescriptor: NFTDescriptorTest
-  let tokens: [TestERC20Metadata, TestERC20Metadata, TestERC20Metadata, TestERC20Metadata]
-
-  let loadFixture: ReturnType<typeof waffle.createFixtureLoader>
-
-  before('create fixture loader', async () => {
-    wallets = await (ethers as any).getSigners()
-
-    loadFixture = waffle.createFixtureLoader(wallets)
-  })
-
   beforeEach('load fixture', async () => {
-    ;({ nftDescriptor, tokens } = await loadFixture(nftDescriptorFixture))
+    ;({ nftDescriptor, tokens } = await networkHelpers.loadFixture(nftDescriptorFixture))
   })
 
   describe('#constructTokenURI', () => {
@@ -84,12 +89,12 @@ describe('NFTDescriptor', () => {
 
     beforeEach(async () => {
       tokenId = 123
-      baseTokenAddress = tokens[0].address
-      quoteTokenAddress = tokens[1].address
+      baseTokenAddress = await tokens[0].getAddress()
+      quoteTokenAddress = await tokens[1].getAddress()
       baseTokenSymbol = await tokens[0].symbol()
       quoteTokenSymbol = await tokens[1].symbol()
-      baseTokenDecimals = await tokens[0].decimals()
-      quoteTokenDecimals = await tokens[1].decimals()
+      baseTokenDecimals = Number(await tokens[0].decimals())
+      quoteTokenDecimals = Number(await tokens[1].decimals())
       flipRatio = false
       tickLower = getMinTick(TICK_SPACINGS[FeeAmount.MEDIUM])
       tickUpper = getMaxTick(TICK_SPACINGS[FeeAmount.MEDIUM])
@@ -533,7 +538,6 @@ describe('NFTDescriptor', () => {
 
       it('when the decimal is at index 1', async () => {
         const ratio = encodePriceSqrt(12345, 10000)
-        const bla = await nftDescriptor.fixedPointToDecimalString(ratio, 18, 18)
         expect(await nftDescriptor.fixedPointToDecimalString(ratio, 18, 18)).to.eq('1.2345')
       })
 
@@ -607,18 +611,18 @@ describe('NFTDescriptor', () => {
           return Math.floor(min + ((Math.random() * 100) % (max + 1 - min)))
         }
 
-        const inputs: [BigNumber, number, number][] = []
+        const inputs: [bigint, number, number][] = []
         let i = 0
         while (i <= 20) {
-          const ratio = BigNumber.from(`0x${randomBytes(random(7, 20)).toString('hex')}`)
+          const ratio = BigInt(`0x${randomBytes(random(7, 20)).toString('hex')}`)
           const decimals0 = random(3, 21)
           const decimals1 = random(3, 21)
           const decimalDiff = Math.abs(decimals0 - decimals1)
 
           // TODO: Address edgecase out of bounds prices due to decimal differences
           if (
-            ratio.div(TEN.pow(decimalDiff)).gt(LOWEST_SQRT_RATIO) &&
-            ratio.mul(TEN.pow(decimalDiff)).lt(HIGHEST_SQRT_RATIO)
+            ratio / 10n ** BigInt(decimalDiff) > LOWEST_SQRT_RATIO &&
+            ratio * 10n ** BigInt(decimalDiff) < HIGHEST_SQRT_RATIO
           ) {
             inputs.push([ratio, decimals0, decimals1])
             i++
@@ -626,7 +630,7 @@ describe('NFTDescriptor', () => {
         }
 
         for (let i in inputs) {
-          let ratio: BigNumber | number
+          let ratio: bigint
           let decimals0: number
           let decimals1: number
           ;[ratio, decimals0, decimals1] = inputs[i]
@@ -651,8 +655,8 @@ describe('NFTDescriptor', () => {
     let tickCurrent: number
     let tickSpacing: number
     let poolAddress: string
-    let quoteTokensOwed: number
-    let baseTokensOwed: number
+    let quoteTokensOwed: bigint
+    let baseTokensOwed: bigint
 
     beforeEach(async () => {
       tokenId = 123
@@ -663,8 +667,8 @@ describe('NFTDescriptor', () => {
       tickLower = -1000
       tickUpper = 2000
       tickCurrent = 40
-      baseTokenDecimals = await tokens[0].decimals()
-      quoteTokenDecimals = await tokens[1].decimals()
+      baseTokenDecimals = Number(await tokens[0].decimals())
+      quoteTokenDecimals = Number(await tokens[1].decimals())
       flipRatio = false
       tickSpacing = TICK_SPACINGS[FeeAmount.MEDIUM]
       poolAddress = `0x${'b'.repeat(40)}`

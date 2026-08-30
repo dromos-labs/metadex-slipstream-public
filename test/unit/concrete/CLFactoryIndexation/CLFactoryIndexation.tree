@@ -1,0 +1,8 @@
+UnitCLFactoryIndexation::poolByTokenIndexLength
+└── it returns length of poolByTokenIndex for token
+
+UnitCLFactoryIndexation::poolsIndexLength
+└── it returns length of poolsIndex
+
+UnitCLFactoryIndexation::tokenIndexLength
+└── it returns length of tokenIndex

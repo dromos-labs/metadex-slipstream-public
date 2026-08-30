@@ -1,22 +1,31 @@
-import { Wallet } from 'ethers'
-import { ethers } from 'hardhat'
-import { TestMulticall } from '../../typechain/TestMulticall'
+import { Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
 import { expect } from './shared/expect'
 
 import snapshotGasCost from './shared/snapshotGasCost'
 
 describe('Multicall', async () => {
-  let wallets: Wallet[]
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
 
-  let multicall: TestMulticall
+  let wallet: any
+  let multicall: Contract
 
-  before('get wallets', async () => {
-    wallets = await (ethers as any).getSigners()
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+    ;[wallet] = await ethers.getSigners()
   })
 
-  beforeEach('create multicall', async () => {
+  const multicallFixture = async () => {
     const multicallTestFactory = await ethers.getContractFactory('TestMulticall')
-    multicall = (await multicallTestFactory.deploy()) as TestMulticall
+    return (await multicallTestFactory.deploy()) as unknown as Contract
+  }
+
+  beforeEach('create multicall', async () => {
+    multicall = await networkHelpers.loadFixture(multicallFixture)
   })
 
   it('revert messages are returned', async () => {
@@ -26,7 +35,7 @@ describe('Multicall', async () => {
   })
 
   it('return data is properly encoded', async () => {
-    const [data] = await multicall.callStatic.multicall([
+    const [data] = await multicall.multicall.staticCall([
       multicall.interface.encodeFunctionData('functionThatReturnsTuple', ['1', '2']),
     ])
     const {
@@ -51,7 +60,7 @@ describe('Multicall', async () => {
     })
 
     it('msg.sender', async () => {
-      expect(await multicall.returnSender()).to.eq(wallets[0].address)
+      expect(await multicall.returnSender()).to.eq(wallet.address)
     })
   })
 

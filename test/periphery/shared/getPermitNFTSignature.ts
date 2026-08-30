@@ -1,29 +1,30 @@
-import { BigNumberish, constants, Signature, Wallet } from 'ethers'
-import { splitSignature } from 'ethers/lib/utils'
-import { NonfungiblePositionManager } from '../../../typechain'
+import { type BigNumberish, MaxUint256, Signature } from 'ethers'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
+import { Contract } from 'ethers'
 
 export default async function getPermitNFTSignature(
-  wallet: Wallet,
-  positionManager: NonfungiblePositionManager,
+  wallet: HardhatEthersSigner,
+  positionManager: Contract,
   spender: string,
   tokenId: BigNumberish,
-  deadline: BigNumberish = constants.MaxUint256,
-  permitConfig?: { nonce?: BigNumberish; name?: string; chainId?: number; version?: string }
+  deadline: BigNumberish = MaxUint256,
+  permitConfig?: { nonce?: BigNumberish; name?: string; chainId?: number | bigint; version?: string }
 ): Promise<Signature> {
+  const provider = wallet.provider!
   const [nonce, name, version, chainId] = await Promise.all([
-    permitConfig?.nonce ?? positionManager.positions(tokenId).then((p) => p.nonce),
+    permitConfig?.nonce ?? positionManager.positions(tokenId).then((p: any) => p.nonce),
     permitConfig?.name ?? positionManager.name(),
     permitConfig?.version ?? '1',
-    permitConfig?.chainId ?? wallet.getChainId(),
+    permitConfig?.chainId ?? (await provider.getNetwork()).chainId,
   ])
 
-  return splitSignature(
-    await wallet._signTypedData(
+  return Signature.from(
+    await wallet.signTypedData(
       {
         name,
         version,
         chainId,
-        verifyingContract: positionManager.address,
+        verifyingContract: await positionManager.getAddress(),
       },
       {
         Permit: [

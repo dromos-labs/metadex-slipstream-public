@@ -8,7 +8,6 @@ import {
   NonfungiblePositionManager,
   CLGauge,
   CLGaugeFactory,
-  CustomSwapFeeModule,
   CustomUnstakedFeeModule,
   MixedRouteQuoterV1,
   QuoterV2,
@@ -61,7 +60,6 @@ async function main() {
 
   await gaugeFactory.setNonfungiblePositionManager(nft.address)
 
-  const swapFeeModule = await deploy<CustomSwapFeeModule>('CustomSwapFeeModule', undefined, poolFactory.address)
   const unstakedFeeModule = await deploy<CustomUnstakedFeeModule>(
     'CustomUnstakedFeeModule',
     undefined,
@@ -83,7 +81,6 @@ async function main() {
   console.log(`NFT deployed to: ${nft.address}`)
   console.log(`Gauge Implementation deployed to: ${gaugeImplementation.address}`)
   console.log(`Gauge Factory deployed to: ${gaugeFactory.address}`)
-  console.log(`Swap Fee Module deployed to: ${swapFeeModule.address}`)
   console.log(`Unstaked Fee Module deployed to: ${unstakedFeeModule.address}`)
   console.log(`Mixed Quoter deployed to: ${mixedQuoter.address}`)
   console.log(`Quoter deployed to: ${quoter.address}`)

@@ -1,72 +1,74 @@
 pragma solidity ^0.7.6;
 pragma abicoder v2;
 
-import {CLPoolSwapPartiallyStakedWithUnstakeFeeTest, CLGauge} from "./CLPoolSwapPartiallyStakedWithUnstakeFee.t.sol";
-import {ICLPool} from "contracts/core/interfaces/ICLPool.sol";
+import {CLGauge, CLPoolSwapPartiallyStakedWithUnstakeFeeTest} from './CLPoolSwapPartiallyStakedWithUnstakeFee.t.sol';
+import {ICLPool} from 'contracts/core/interfaces/ICLPool.sol';
+
+import {MockSwapHook} from 'test/mocks/MockSwapHook.sol';
 
 contract HighFee1to1Price2e18MaxRangeLiquidityPartiallyStakedWithUnstakedFeeTest is
-    CLPoolSwapPartiallyStakedWithUnstakeFeeTest
+  CLPoolSwapPartiallyStakedWithUnstakeFeeTest
 {
-    function setUp() public override {
-        super.setUp();
+  function setUp() public override {
+    super.setUp();
 
-        int24 tickSpacing = TICK_SPACING_200;
+    int24 tickSpacing = TICK_SPACING_200;
 
-        uint160 startingPrice = encodePriceSqrt(1, 1);
+    uint160 startingPrice = encodePriceSqrt(1, 1);
 
-        string memory poolName = ".high_fee_1to1_price_2e18_max_range_liquidity";
-        address pool = poolFactory.createPool({
-            tokenA: address(token0),
-            tokenB: address(token1),
-            tickSpacing: tickSpacing,
-            sqrtPriceX96: startingPrice
-        });
+    string memory poolName = '.high_fee_1to1_price_2e18_max_range_liquidity';
+    address pool = poolFactory.createPool({
+      tokenA: address(token0), tokenB: address(token1), tickSpacing: tickSpacing, sqrtPriceX96: startingPrice
+    });
 
-        uint128 liquidity = 2e18;
+    uint128 liquidity = 2e18;
 
-        stakedPositions.push(
-            Position({tickLower: getMinTick(tickSpacing), tickUpper: getMaxTick(tickSpacing), liquidity: liquidity / 2})
-        );
+    stakedPositions.push(
+      Position({tickLower: getMinTick(tickSpacing), tickUpper: getMaxTick(tickSpacing), liquidity: liquidity / 2})
+    );
 
-        unstakedPositions.push(
-            Position({tickLower: getMinTick(tickSpacing), tickUpper: getMaxTick(tickSpacing), liquidity: liquidity / 2})
-        );
+    unstakedPositions.push(
+      Position({tickLower: getMinTick(tickSpacing), tickUpper: getMaxTick(tickSpacing), liquidity: liquidity / 2})
+    );
 
-        gauge = CLGauge(voter.createGauge({_poolFactory: address(poolFactory), _pool: address(pool)}));
+    gauge = CLGauge(voter.createGauge({_poolFactory: address(poolFactory), _pool: address(pool)}));
 
-        vm.stopPrank();
+    vm.stopPrank();
 
-        // set default univ3 pool fee, zero unstaked fee
-        vm.startPrank(users.feeManager);
-        customSwapFeeModule.setCustomFee(address(pool), 10_000);
-        customUnstakedFeeModule.setCustomFee(pool, 125_000);
+    // set default univ3 pool fee, zero unstaked fee
+    vm.startPrank(address(poolFactory.swapFeeManager()));
+    poolFactory.setDefaultSwapHook(address(new MockSwapHook({_customFee: 10_000})));
+    vm.stopPrank();
 
-        vm.startPrank(users.alice);
-        // mint staked position
-        uint256 tokenId = nftCallee.mintNewFullRangePositionForUserWithCustomTickSpacing(
-            stakedPositions[0].liquidity, stakedPositions[0].liquidity, tickSpacing, users.alice
-        );
-        nft.approve(address(gauge), tokenId);
-        gauge.deposit(tokenId);
+    vm.prank(users.feeManager);
+    customUnstakedFeeModule.setCustomFee(pool, 125_000);
 
-        // mint unstaked position
-        nftCallee.mintNewFullRangePositionForUserWithCustomTickSpacing(
-            unstakedPositions[0].liquidity, unstakedPositions[0].liquidity, tickSpacing, users.alice
-        );
+    vm.startPrank(users.alice);
+    // mint staked position
+    uint256 tokenId = nftCallee.mintNewFullRangePositionForUserWithCustomTickSpacing(
+      stakedPositions[0].liquidity, stakedPositions[0].liquidity, tickSpacing, users.alice
+    );
+    nft.approve(address(gauge), tokenId);
+    gauge.deposit(tokenId);
 
-        uint256 poolBalance0 = token0.balanceOf(pool);
-        uint256 poolBalance1 = token1.balanceOf(pool);
+    // mint unstaked position
+    nftCallee.mintNewFullRangePositionForUserWithCustomTickSpacing(
+      unstakedPositions[0].liquidity, unstakedPositions[0].liquidity, tickSpacing, users.alice
+    );
 
-        (uint160 sqrtPriceX96, int24 tick,,,,) = ICLPool(pool).slot0();
+    uint256 poolBalance0 = token0.balanceOf(pool);
+    uint256 poolBalance1 = token1.balanceOf(pool);
 
-        poolSetup = PoolSetup({
-            poolName: poolName,
-            pool: pool,
-            gauge: address(gauge),
-            poolBalance0: poolBalance0,
-            poolBalance1: poolBalance1,
-            sqrtPriceX96: sqrtPriceX96,
-            tick: tick
-        });
-    }
+    (uint160 sqrtPriceX96, int24 tick,,,,) = ICLPool(pool).slot0();
+
+    poolSetup = PoolSetup({
+      poolName: poolName,
+      pool: pool,
+      gauge: address(gauge),
+      poolBalance0: poolBalance0,
+      poolBalance1: poolBalance1,
+      sqrtPriceX96: sqrtPriceX96,
+      tick: tick
+    });
+  }
 }

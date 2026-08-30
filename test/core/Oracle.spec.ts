@@ -1,6 +1,6 @@
-import { BigNumber, BigNumberish, Wallet } from 'ethers'
-import { ethers, waffle } from 'hardhat'
-import { OracleTest } from '../../typechain/OracleTest'
+import { type BigNumberish, Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
 import checkObservationEquals from './shared/checkObservationEquals'
 import { expect } from './shared/expect'
 import { TEST_POOL_START_TIME } from './shared/fixtures'
@@ -8,17 +8,18 @@ import snapshotGasCost from './shared/snapshotGasCost'
 import { MaxUint128 } from './shared/utilities'
 
 describe('Oracle', () => {
-  let wallet: Wallet, other: Wallet
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
 
-  let loadFixture: ReturnType<typeof waffle.createFixtureLoader>
-  before('create fixture loader', async () => {
-    ;[wallet, other] = await (ethers as any).getSigners()
-    loadFixture = waffle.createFixtureLoader([wallet, other])
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
   })
 
   const oracleFixture = async () => {
     const oracleTestFactory = await ethers.getContractFactory('OracleTest')
-    return (await oracleTestFactory.deploy()) as OracleTest
+    return (await oracleTestFactory.deploy()) as unknown as Contract
   }
 
   const initializedOracleFixture = async () => {
@@ -32,9 +33,9 @@ describe('Oracle', () => {
   }
 
   describe('#initialize', () => {
-    let oracle: OracleTest
+    let oracle: Contract
     beforeEach('deploy test oracle', async () => {
-      oracle = await loadFixture(oracleFixture)
+      oracle = await networkHelpers.loadFixture(oracleFixture)
     })
     it('index is 0', async () => {
       await oracle.initialize({ liquidity: 1, tick: 1, time: 1 })
@@ -63,9 +64,9 @@ describe('Oracle', () => {
   })
 
   describe('#grow', () => {
-    let oracle: OracleTest
+    let oracle: Contract
     beforeEach('deploy initialized test oracle', async () => {
-      oracle = await loadFixture(initializedOracleFixture)
+      oracle = await networkHelpers.loadFixture(initializedOracleFixture)
     })
 
     it('increases the cardinality next for the first call', async () => {
@@ -136,10 +137,10 @@ describe('Oracle', () => {
   })
 
   describe('#write', () => {
-    let oracle: OracleTest
+    let oracle: Contract
 
     beforeEach('deploy initialized test oracle', async () => {
-      oracle = await loadFixture(initializedOracleFixture)
+      oracle = await networkHelpers.loadFixture(initializedOracleFixture)
     })
 
     it('single element array gets overwritten', async () => {
@@ -263,9 +264,9 @@ describe('Oracle', () => {
 
   describe('#observe', () => {
     describe('before initialization', async () => {
-      let oracle: OracleTest
+      let oracle: Contract
       beforeEach('deploy test oracle', async () => {
-        oracle = await loadFixture(oracleFixture)
+        oracle = await networkHelpers.loadFixture(oracleFixture)
       })
 
       const observeSingle = async (secondsAgo: number) => {
@@ -312,11 +313,11 @@ describe('Oracle', () => {
         await oracle.grow(2)
         await oracle.update({ advanceTimeBy: 13, tick: 0, liquidity: MaxUint128 })
         let { secondsPerLiquidityCumulativeX128 } = await observeSingle(0)
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(13).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(13n << 128n)
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(6))
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(7).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(7n << 128n)
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(12))
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(1).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(1n << 128n)
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(13))
         expect(secondsPerLiquidityCumulativeX128).to.eq(0)
       })
@@ -326,11 +327,11 @@ describe('Oracle', () => {
         await oracle.grow(2)
         await oracle.update({ advanceTimeBy: 13, tick: 0, liquidity: MaxUint128 })
         let { secondsPerLiquidityCumulativeX128 } = await observeSingle(0)
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(13).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(13n << 128n)
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(6))
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(7).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(7n << 128n)
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(12))
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(1).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(1n << 128n)
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(13))
         expect(secondsPerLiquidityCumulativeX128).to.eq(0)
       })
@@ -341,16 +342,16 @@ describe('Oracle', () => {
         await oracle.grow(2)
         await oracle.update({ advanceTimeBy: 2 ** 32 - 6, tick: 0, liquidity: 0 })
         let { secondsPerLiquidityCumulativeX128 } = await observeSingle(0)
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(2 ** 32 - 6).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(BigInt(2 ** 32 - 6) << 128n)
         await oracle.update({ advanceTimeBy: 13, tick: 0, liquidity: 0 })
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(0))
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(7).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(7n << 128n)
 
         // interpolation checks
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(3))
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(4).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(4n << 128n)
         ;({ secondsPerLiquidityCumulativeX128 } = await observeSingle(8))
-        expect(secondsPerLiquidityCumulativeX128).to.eq(BigNumber.from(2 ** 32 - 1).shl(128))
+        expect(secondsPerLiquidityCumulativeX128).to.eq(BigInt(2 ** 32 - 1) << 128n)
       })
 
       it('single observation at current time', async () => {
@@ -473,9 +474,9 @@ describe('Oracle', () => {
       })
 
       it('can fetch multiple observations', async () => {
-        await oracle.initialize({ time: 5, tick: 2, liquidity: BigNumber.from(2).pow(15) })
+        await oracle.initialize({ time: 5, tick: 2, liquidity: 2n ** 15n })
         await oracle.grow(4)
-        await oracle.update({ advanceTimeBy: 13, tick: 6, liquidity: BigNumber.from(2).pow(12) })
+        await oracle.update({ advanceTimeBy: 13, tick: 6, liquidity: 2n ** 12n })
         await oracle.advanceTime(5)
 
         const { tickCumulatives, secondsPerLiquidityCumulativeX128s } = await oracle.observe([0, 3, 8, 13, 15, 18])
@@ -527,9 +528,9 @@ describe('Oracle', () => {
           await oracle.update({ advanceTimeBy: 6, tick: 6, liquidity: 7 })
           return oracle
         }
-        let oracle: OracleTest
+        let oracle: Contract
         beforeEach('set up observations', async () => {
-          oracle = await loadFixture(oracleFixture5Observations)
+          oracle = await networkHelpers.loadFixture(oracleFixture5Observations)
         })
 
         const observeSingle = async (secondsAgo: number) => {
@@ -593,16 +594,10 @@ describe('Oracle', () => {
         it('fetch many values', async () => {
           await oracle.advanceTime(6)
           const { tickCumulatives, secondsPerLiquidityCumulativeX128s } = await oracle.observe([
-            20,
-            17,
-            13,
-            10,
-            5,
-            1,
-            0,
+            20, 17, 13, 10, 5, 1, 0,
           ])
           expect({
-            tickCumulatives: tickCumulatives.map((tc: any) => tc.toNumber()),
+            tickCumulatives: tickCumulatives.map((tc: any) => Number(tc)),
             secondsPerLiquidityCumulativeX128s: secondsPerLiquidityCumulativeX128s.map((lc: any) => lc.toString()),
           }).to.matchSnapshot()
         })
@@ -637,7 +632,7 @@ describe('Oracle', () => {
   describe.skip('full oracle', function () {
     this.timeout(1_200_000)
 
-    let oracle: OracleTest
+    let oracle: Contract
 
     const BATCH_SIZE = 300
 
@@ -670,7 +665,7 @@ describe('Oracle', () => {
     }
 
     beforeEach('create a full oracle', async () => {
-      oracle = await loadFixture(maxedOutOracleFixture)
+      oracle = await networkHelpers.loadFixture(maxedOutOracleFixture)
     })
 
     it('has max cardinality next', async () => {

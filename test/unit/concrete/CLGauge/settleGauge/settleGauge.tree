@@ -1,0 +1,19 @@
+SettleGaugeConcreteUnitTest
+├── When the caller is not the pool
+│   └── It should revert with {NA}
+└── When the caller is the pool
+    ├── When the voter reports no new cumulative reward share
+    │   ├── It should settle the gauge in the LeafVoter
+    │   ├── It should return zero
+    │   ├── It should keep the cursor unchanged
+    │   └── It should not emit a {GaugeSettled} event
+    ├── When the voter reports a new cumulative reward share
+    │   ├── It should settle the gauge in the LeafVoter
+    │   ├── It should return the delta since the last settled cumulative reward share
+    │   ├── It should advance the cursor to the new cumulative reward share
+    │   └── It should emit a {GaugeSettled} event
+    └── When the voter reports a lower cumulative reward share
+        ├── It should settle the gauge in the LeafVoter
+        ├── It should return zero
+        ├── It should keep the cursor unchanged
+        └── It should not emit a {GaugeSettled} event

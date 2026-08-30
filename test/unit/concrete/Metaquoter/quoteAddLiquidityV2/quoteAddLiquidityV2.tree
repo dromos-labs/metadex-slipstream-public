@@ -1,0 +1,88 @@
+UnitMetaquoter::QuoteAddLiquidityV2
+├── when the pool is not a registered target
+│   └── it reverts with IP
+└── given the pool is a registered target
+    ├── when the target factory is not approved
+    │   └── it reverts with AF
+    └── given the target factory is approved
+        ├── when the pool type is not a V2 type
+        │   └── it reverts with PT
+        ├── given the total supply is zero
+        │   ├── when the geometric mean underflows the minimum liquidity
+        │   │   └── it reverts with SafeMath: subtraction overflow
+        │   ├── given the pool is stable
+        │   │   ├── when the deposits are not equal
+        │   │   │   └── it reverts with DE
+        │   │   ├── when a donation makes the credited deposits unequal
+        │   │   │   └── it reverts with DE
+        │   │   ├── when the stable invariant is below the minimum
+        │   │   │   └── it reverts with BK
+        │   │   ├── when the deposits are equal
+        │   │   │   ├── it returns amount0Desired as amount0 and amount1Desired as amount1
+        │   │   │   └── it returns liquidity as sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY
+        │   │   ├── when an offsetting desired deposit balances the credited deposits
+        │   │   │   ├── it returns amount0Desired as amount0 and amount1Desired as amount1
+        │   │   │   └── it returns liquidity as sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY
+        │   │   ├── when donations are credited on both sides
+        │   │   │   ├── it returns amount0Desired as amount0 and amount1Desired as amount1
+        │   │   │   └── it returns liquidity from the desired amounts, not the credited ones
+        │   │   ├── when the deposits are equal at differing token decimals
+        │   │   │   ├── it returns amount0Desired as amount0 and amount1Desired as amount1
+        │   │   │   └── it returns liquidity as sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY
+        │   │   ├── when the raw deposits match but the normalized ones do not
+        │   │   │   └── it reverts with DE
+        │   │   └── when the stable invariant equals the minimum
+        │   │       └── it reverts with BK
+        │   └── given the pool is not stable
+        │       ├── when the first mint clears the minimum liquidity
+        │       │   ├── it returns amount0Desired as amount0 and amount1Desired as amount1
+        │       │   └── it returns liquidity as sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY
+        │       └── when the minted liquidity is below the minimum
+        │           └── it reverts with ILM
+        └── given the total supply is nonzero
+            ├── when amount0Desired is zero
+            │   └── it reverts with IA
+            ├── when reserve0 is zero
+            │   └── it reverts with IL
+            ├── when reserve1 is zero
+            │   └── it reverts with IL
+            └── given both reserves are nonzero
+                ├── when the minted liquidity is zero
+                │   └── it reverts with ILM
+                ├── when a stable pool has drifted reserves
+                │   ├── it trims amount1 to the drifted reserve ratio
+                │   └── it returns liquidity as the min of the reserve-proportional shares
+                ├── when the forward quotient does not fit uint256
+                │   ├── it returns the full precision amount0Optimal as amount0 and amount1Desired as amount1
+                │   └── it returns liquidity as the min of the reserve-proportional shares
+                ├── when the high word is one below the denominator
+                │   ├── it returns amount0Desired as amount0 and the exact forward quote as amount1
+                │   └── it returns liquidity as the min of the reserve-proportional shares
+                ├── when the forward quotient is the first unrepresentable one
+                │   ├── it returns the reverse quote as amount0 and amount1Desired as amount1
+                │   └── it returns liquidity as the min of the reserve-proportional shares
+                ├── when the forward quotient is exactly the uint256 max
+                │   ├── it returns amount0Desired as amount0 and the uint256 max as amount1
+                │   └── it returns liquidity as the min of the reserve-proportional shares
+                ├── when a non power of two product overflows
+                │   ├── it returns amount0Desired as amount0 and the exact forward quote as amount1
+                │   └── it returns liquidity as the min of the reserve-proportional shares
+                ├── given the optimal amount1 quote is at most amount1Desired
+                │   ├── when the amounts are trimmed to amount1
+                │   │   ├── it returns amount0Desired as amount0 and amount1Optimal as amount1
+                │   │   └── it returns liquidity as the min of the reserve-proportional shares
+                │   ├── when the forward quote ties amount1Desired
+                │   │   ├── it returns amount0Desired as amount0 and the tying forward quote as amount1
+                │   │   └── it returns liquidity as the min of the reserve-proportional shares
+                │   └── when the forward product overflows and amount1 is trimmed
+                │       ├── it returns amount0Desired as amount0 and the full precision amount1Optimal as amount1
+                │       └── it returns liquidity as the min of the reserve-proportional shares
+                └── given the optimal amount1 quote exceeds amount1Desired
+                    ├── when amount1Desired is zero
+                    │   └── it reverts with IA
+                    ├── when the trimmed amount0 is quoted
+                    │   ├── it returns amount0Optimal as amount0 and amount1Desired as amount1
+                    │   └── it returns liquidity as the min of the reserve-proportional shares
+                    └── when the forward product overflows and amount0 is trimmed
+                        ├── it returns the full precision amount0Optimal as amount0 and amount1Desired as amount1
+                        └── it returns liquidity as the min of the reserve-proportional shares

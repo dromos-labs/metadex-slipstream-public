@@ -1,0 +1,5 @@
+UnitCLFactory::GetPoolSwapHook
+├── when the pool swap hook is set
+│   └── it returns the pool swap hook
+└── when the pool swap hook isn't set
+    └── it returns the default swap hook

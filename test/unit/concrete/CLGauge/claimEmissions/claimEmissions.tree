@@ -1,0 +1,159 @@
+UnitCLGauge::ClaimEmissions
+├── when the caller is not the account or an approved operator
+│   └── it should revert with NA
+└── when the caller is authorized
+    ├── when the caller is the account
+    │   ├── when claiming no positions
+    │   │   ├── when the account has no deferred emissions
+    │   │   │   └── it should revert with NS
+    │   │   └── when the account has only deferred LP emissions
+    │   │       ├── it should settle the pool rewards
+    │   │       ├── it should emit DeferredEmissionsClaimed
+    │   │       ├── it should clear the deferred LP emissions
+    │   │       └── it should mint the full deferred balance to the recipient
+    │   ├── when claiming one position
+    │   │   ├── when the token id is not staked by the account
+    │   │   │   └── it should revert with NA
+    │   │   └── when the position is staked by the account
+    │   │       ├── when the recipient is the zero address
+    │   │       │   └── it should revert with ZA
+    │   │       ├── when the position has no accrued emissions
+    │   │       │   ├── it should settle the pool rewards
+    │   │       │   ├── it should advance the position reward growth
+    │   │       │   ├── it should not forfeit emissions
+    │   │       │   └── it should not mint emissions
+    │   │       ├── when the position has accrued emissions
+    │   │       │   ├── when there is no penalty and no referral
+    │   │       │   │   ├── when the reward growth is known
+    │   │       │   │   │   ├── it should settle the pool rewards
+    │   │       │   │   │   ├── it should advance the position reward growth
+    │   │       │   │   │   ├── it should not forfeit emissions
+    │   │       │   │   │   ├── it should emit the EmissionsClaimed event
+    │   │       │   │   │   └── it should mint full emissions to the recipient
+    │   │       │   │   └── when the reward growth varies
+    │   │       │   │       ├── it should settle the pool rewards
+    │   │       │   │       ├── it should advance the position reward growth
+    │   │       │   │       ├── it should not forfeit emissions
+    │   │       │   │       ├── it should emit the EmissionsClaimed event
+    │   │       │   │       └── it should mint full emissions to the recipient
+    │   │       │   ├── when there is a penalty rate
+    │   │       │   │   ├── when called within min stake blocks
+    │   │       │   │   │   ├── when penalty rounds down to zero
+    │   │       │   │   │   │   ├── it should settle the pool rewards
+    │   │       │   │   │   │   ├── it should advance the position reward growth
+    │   │       │   │   │   │   ├── it should not forfeit emissions
+    │   │       │   │   │   │   ├── it should emit the EmissionsClaimed event
+    │   │       │   │   │   │   └── it should mint full emissions to the recipient
+    │   │       │   │   │   └── when penalty does not round down to zero
+    │   │       │   │   │       ├── when there are no remaining emissions after penalty
+    │   │       │   │   │       │   ├── when there is no referral
+    │   │       │   │   │       │   │   ├── it should settle the pool rewards
+    │   │       │   │   │       │   │   ├── it should advance the position reward growth
+    │   │       │   │   │       │   │   ├── it should emit the EarlyWithdrawPenalty event
+    │   │       │   │   │       │   │   ├── it should forfeit all emissions
+    │   │       │   │   │       │   │   └── it should not mint emissions
+    │   │       │   │   │       │   └── when there is a referral config
+    │   │       │   │   │       │       ├── it should settle the pool rewards
+    │   │       │   │   │       │       ├── it should advance the position reward growth
+    │   │       │   │   │       │       ├── it should emit the EarlyWithdrawPenalty event
+    │   │       │   │   │       │       ├── it should forfeit all emissions
+    │   │       │   │   │       │       └── it should not mint emissions
+    │   │       │   │   │       └── when there are remaining emissions after penalty
+    │   │       │   │   │           ├── it should settle the pool rewards
+    │   │       │   │   │           ├── it should advance the position reward growth
+    │   │       │   │   │           ├── it should emit the EarlyWithdrawPenalty event
+    │   │       │   │   │           ├── it should emit the EmissionsClaimed event
+    │   │       │   │   │           ├── it should forfeit the penalty emissions
+    │   │       │   │   │           └── it should mint the remaining emissions to the recipient
+    │   │       │   │   └── when called after min stake blocks
+    │   │       │   │       ├── it should settle the pool rewards
+    │   │       │   │       ├── it should advance the position reward growth
+    │   │       │   │       ├── it should not forfeit emissions
+    │   │       │   │       ├── it should emit the EmissionsClaimed event
+    │   │       │   │       └── it should mint full emissions to the recipient
+    │   │       │   ├── when there is a referral share
+    │   │       │   │   ├── when referral share rounds down to zero
+    │   │       │   │   │   ├── it should settle the pool rewards
+    │   │       │   │   │   ├── it should advance the position reward growth
+    │   │       │   │   │   ├── it should not forfeit emissions
+    │   │       │   │   │   ├── it should emit the EmissionsClaimed event
+    │   │       │   │   │   └── it should mint full emissions to the recipient
+    │   │       │   │   └── when referral share does not round down to zero
+    │   │       │   │       ├── it should settle the pool rewards
+    │   │       │   │       ├── it should advance the position reward growth
+    │   │       │   │       ├── it should not forfeit emissions
+    │   │       │   │       ├── it should emit the ReferralEmissionsDeferred event
+    │   │       │   │       ├── it should emit the EmissionsClaimed event
+    │   │       │   │       ├── it should mint LP emissions to the recipient
+    │   │       │   │       └── it should store the referral emissions on the referral
+    │   │       │   └── when there is a penalty rate and a referral share
+    │   │       │       ├── when the penalty rate and referral share are known
+    │   │       │       │   ├── it should settle the pool rewards
+    │   │       │       │   ├── it should advance the position reward growth
+    │   │       │       │   ├── it should apply the penalty before the referral
+    │   │       │       │   ├── it should emit the EarlyWithdrawPenalty event
+    │   │       │       │   ├── it should emit the ReferralEmissionsDeferred event
+    │   │       │       │   ├── it should emit the EmissionsClaimed event
+    │   │       │       │   ├── it should forfeit the penalty emissions
+    │   │       │       │   ├── it should mint LP emissions to the recipient
+    │   │       │       │   └── it should store the referral emissions on the referral
+    │   │       │       └── when the penalty rate and referral share vary
+    │   │       │           ├── it should settle the pool rewards
+    │   │       │           ├── it should advance the position reward growth
+    │   │       │           ├── it should apply the penalty before the referral
+    │   │       │           ├── it should emit the EarlyWithdrawPenalty event
+    │   │       │           ├── it should emit the ReferralEmissionsDeferred event
+    │   │       │           ├── it should emit the EmissionsClaimed event
+    │   │       │           ├── it should forfeit the penalty emissions
+    │   │       │           ├── it should mint LP emissions to the recipient
+    │   │       │           └── it should store the referral emissions on the referral
+    │   │       └── when the pool reports a rollover
+    │   │           ├── when there are no accrued emissions
+    │   │           │   ├── it should settle the pool rewards
+    │   │           │   ├── it should forfeit the rollover emissions
+    │   │           │   └── it should not mint emissions
+    │   │           └── when there is a penalty
+    │   │               ├── it should settle the pool rewards
+    │   │               ├── it should forfeit the rollover together with the penalty emissions
+    │   │               └── it should mint the remaining emissions to the recipient
+    │   └── when claiming for multiple positions
+    │       ├── when claiming selected staked positions
+    │       │   ├── it should settle the pool rewards
+    │       │   ├── it should advance each selected position reward growth
+    │       │   ├── it should apply the penalty before the referral for each selected position
+    │       │   ├── it should aggregate live and deferred recipient emissions
+    │       │   ├── it should aggregate live and existing deferred referral emissions on the referral
+    │       │   ├── it should emit the EarlyWithdrawPenalty event for each penalized position
+    │       │   ├── it should emit the ReferralEmissionsDeferred event for each referred position
+    │       │   ├── it should emit the EmissionsClaimed event for each paid position
+    │       │   ├── it should forfeit the aggregate penalty emissions
+    │       │   ├── it should mint aggregate live and deferred emissions
+    │       │   ├── it should emit DeferredEmissionsClaimed
+    │       │   └── it should clear the deferred LP emissions
+    │       └── when claiming all staked positions
+    │           ├── when the account has no staked positions or deferred LP emissions
+    │           │   └── it should revert with NS
+    │           └── when the account has multiple staked positions
+    │               ├── it should settle the pool rewards
+    │               ├── it should advance each staked position reward growth
+    │               ├── it should apply the penalty before the referral for each staked position
+    │               ├── it should aggregate recipient emissions across all staked positions
+    │               ├── it should aggregate referral emissions across all staked positions
+    │               ├── it should emit the EarlyWithdrawPenalty event for each penalized position
+    │               ├── it should emit the ReferralEmissionsDeferred event for each referred position
+    │               ├── it should emit the EmissionsClaimed event for each paid position
+    │               ├── it should forfeit the aggregate penalty emissions
+    │               ├── it should mint aggregate LP emissions to the recipient
+    │               └── it should aggregate referral emissions on the referral
+    └── when the caller is an approved operator
+        ├── it should settle the pool rewards
+        ├── it should advance the position reward growth
+        ├── it should apply the penalty before the referral
+        ├── it should emit the EarlyWithdrawPenalty event
+        ├── it should emit the ReferralEmissionsDeferred event
+        ├── it should emit the EmissionsClaimed event
+        ├── it should forfeit the penalty emissions
+        ├── it should emit DeferredEmissionsClaimed
+        ├── it should store the referral emissions on the referral
+        ├── it should clear the deferred LP emissions
+        └── it should combine live and deferred LP emissions in one mint

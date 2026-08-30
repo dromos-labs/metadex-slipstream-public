@@ -1,0 +1,10 @@
+UnitCLPool::PublicSettleToBlock
+├── when the caller is not the gauge
+│   └── it should revert with NG
+└── when the caller is the gauge
+    ├── when there is no rollover accumulated
+    │   └── it should return zero
+    └── when there is rollover accumulated
+        ├── it should settle to the current block
+        ├── it should return the accumulated rollover
+        └── it should clear the rollover

@@ -1,16 +1,15 @@
-import bn from 'bignumber.js'
-import { BigNumber, BigNumberish } from 'ethers'
+import Decimal from 'decimal.js'
+import type { BigNumberish } from 'ethers'
 
-bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
+Decimal.set({ toExpPos: 9_999_999, toExpNeg: -9_999_999, precision: 80 })
 
 // returns the sqrt price as a 64x96
-export function encodePriceSqrt(reserve1: BigNumberish, reserve0: BigNumberish): BigNumber {
-  return BigNumber.from(
-    new bn(reserve1.toString())
+export function encodePriceSqrt(reserve1: BigNumberish, reserve0: BigNumberish): bigint {
+  return BigInt(
+    new Decimal(reserve1.toString())
       .div(reserve0.toString())
       .sqrt()
-      .multipliedBy(new bn(2).pow(96))
-      .integerValue(3)
-      .toString()
+      .mul(new Decimal(2).pow(96))
+      .toFixed(0, Decimal.ROUND_FLOOR)
   )
 }

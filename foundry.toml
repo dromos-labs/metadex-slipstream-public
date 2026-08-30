@@ -1,26 +1,49 @@
+[fmt]
+line_length = 120
+tab_width = 2
+bracket_spacing = false
+int_types = 'long'
+quote_style = 'single'
+number_underscore = 'thousands'
+multiline_func_header = 'params_first_multi'
+sort_imports = true
+
 [profile.default]
 src = "contracts"
 test = "test"
 out = "out"
 libs = ["lib"]
-solc_version = "0.7.6"
+
+# Keep Slipstream on OpenZeppelin 3.4 while resolving MetaDEX imports against OpenZeppelin 5.6.
+auto_detect_remappings = false
+
 optimizer = true
 optimizer_runs = 200
 
-fs_permissions = [{ access = "read-write", path = "./"}]
+fs_permissions = [{ access = "read-write", path = "./" }]
 
 no_match_test = "testEchidna|testGasFork"
 no_match_contract = "VerifyDeployCL"
 
 show_progress = true
 
-# See more config options https://github.com/foundry-rs/foundry/tree/master/config
+[profile.optimized]
+# Production-style build for new 0.8.x modules. via_ir + higher optimizer runs.
+# Invoke with FOUNDRY_PROFILE=optimized forge build.
+via_ir = true
+optimizer_runs = 10_000
+out = "out-via-ir"
 
 [fuzz]
 runs = 256
 
 [profile.ci.fuzz]
 runs = 5000
+
+# Fast edit-loop profile: same build settings as default, fewer fuzz runs.
+# Invoke with FOUNDRY_PROFILE=dev forge test. Always finish with a default-profile (256-run) pass.
+[profile.dev.fuzz]
+runs = 64
 
 [rpc_endpoints]
 optimism = "${OPTIMISM_RPC_URL}"

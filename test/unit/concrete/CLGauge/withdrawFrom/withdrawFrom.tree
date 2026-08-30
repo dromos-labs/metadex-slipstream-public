@@ -1,0 +1,35 @@
+WithdrawFromConcreteUnitTest
+├── When account is zero address
+│   └── It should revert with {ZA}
+├── When caller is not approved
+│   └── It should revert with {NW}
+├── When caller is account without approval
+│   └── It should revert with {NW}
+├── When supplied account is not stake owner
+│   └── It should revert with {NA}
+├── When caller has per token approval
+│   ├── It should send the nft to caller
+│   ├── It should clear per token approval
+│   └── It should remove the stake from account
+├── When caller has blanket approval
+│   ├── It should send the nft to caller
+│   ├── It should remove the stake from account
+│   └── It should keep blanket approval active
+├── When caller has no claim approval
+│   ├── It should withdraw without requiring claim approval
+│   ├── It should settle the pool rewards
+│   ├── It should mint claimed emissions to account
+│   ├── It should not mint claimed emissions to caller
+│   └── It should send the nft to caller
+└── When caller has claim approval
+    ├── When emission minting does not revert
+    │   ├── It should settle the pool rewards
+    │   ├── It should mint claimed emissions to caller
+    │   ├── It should send the nft to caller
+    │   └── It should keep claim approval active after withdrawal
+    └── When emission minting reverts
+        ├── It should collect position fees to the caller
+        ├── It should attempt to mint emissions to the caller
+        ├── It should credit deferred emissions to the account
+        ├── It should emit an {EmissionsDeferred} event
+        └── It should send the nft to caller

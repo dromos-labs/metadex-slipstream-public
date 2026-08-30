@@ -1,0 +1,10 @@
+UnitSwapHookLib::GetAfterSwapFee
+├── when swapHook is address zero
+│   └── it returns 0
+└── when swapHook isn't address zero
+    ├── when call fails
+    │   └── it returns 0
+    ├── when call succeeds but fee is gt fee ceil
+    │   └── it returns _SWAP_FEE_CEIL
+    └── when call succeeds and fee is leq fee ceil
+        └── it returns fee

@@ -1,0 +1,9 @@
+UnitCLFactory::SetClPoolTapeManager
+├── when caller isn't clPoolTapeManager
+│   └── it reverts with NotClPoolTapeManager
+└── when caller is clPoolTapeManager
+    ├── when new clPoolTapeManager is address zero
+    │   └── it reverts with ClPoolTapeManagerIsZero
+    └── when new clPoolTapeManager isn't address zero
+        ├── it sets clPoolTapeManager to new clPoolTapeManager
+        └── it emits ClPoolTapeManagerChanged

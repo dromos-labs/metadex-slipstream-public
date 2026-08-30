@@ -1,22 +1,22 @@
-import bn from 'bignumber.js'
-import { BigNumber, BigNumberish, constants, Contract, ContractTransaction, utils, Wallet } from 'ethers'
-import { TestCLCallee } from '../../../typechain/TestCLCallee'
-import { TestCLRouter } from '../../../typechain/TestCLRouter'
-import { MockTimeCLPool } from '../../../typechain/MockTimeCLPool'
-import { CoreTestERC20 } from '../../../typechain/CoreTestERC20'
+import Decimal from 'decimal.js'
+import {
+  type BigNumberish,
+  Contract,
+  type ContractTransactionResponse,
+  MaxUint256,
+  solidityPackedKeccak256,
+} from 'ethers'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
 
-export const MaxUint128 = BigNumber.from(2).pow(128).sub(1)
+export const MaxUint128 = 2n ** 128n - 1n
 
 export const getMinTick = (tickSpacing: number) => Math.ceil(-887272 / tickSpacing) * tickSpacing
 export const getMaxTick = (tickSpacing: number) => Math.floor(887272 / tickSpacing) * tickSpacing
 export const getMaxLiquidityPerTick = (tickSpacing: number) =>
-  BigNumber.from(2)
-    .pow(128)
-    .sub(1)
-    .div((getMaxTick(tickSpacing) - getMinTick(tickSpacing)) / tickSpacing + 1)
+  (2n ** 128n - 1n) / BigInt((getMaxTick(tickSpacing) - getMinTick(tickSpacing)) / tickSpacing + 1)
 
-export const MIN_SQRT_RATIO = BigNumber.from('4295128739')
-export const MAX_SQRT_RATIO = BigNumber.from('1461446703485210103287273052203988822378723970342')
+export const MIN_SQRT_RATIO = 4295128739n
+export const MAX_SQRT_RATIO = 1461446703485210103287273052203988822378723970342n
 
 export enum FeeAmount {
   LOW = 500,
@@ -30,47 +30,49 @@ export const TICK_SPACINGS: { [amount in FeeAmount]: number } = {
   [FeeAmount.HIGH]: 200,
 }
 
-export function expandTo18Decimals(n: number): BigNumber {
-  return BigNumber.from(n).mul(BigNumber.from(10).pow(18))
+export function expandTo18Decimals(n: number): bigint {
+  return BigInt(n) * 10n ** 18n
 }
 
-bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
+Decimal.set({ toExpPos: 9_999_999, toExpNeg: -9_999_999, precision: 80 })
 
 // returns the sqrt price as a 64x96
-export function encodePriceSqrt(reserve1: BigNumberish, reserve0: BigNumberish): BigNumber {
-  return BigNumber.from(
-    new bn(reserve1.toString())
+export function encodePriceSqrt(reserve1: BigNumberish, reserve0: BigNumberish): bigint {
+  return BigInt(
+    new Decimal(reserve1.toString())
       .div(reserve0.toString())
       .sqrt()
-      .multipliedBy(new bn(2).pow(96))
-      .integerValue(3)
-      .toString()
+      .mul(new Decimal(2).pow(96))
+      .toFixed(0, Decimal.ROUND_FLOOR)
   )
 }
 
 export function getPositionKey(address: string, lowerTick: number, upperTick: number): string {
-  return utils.keccak256(utils.solidityPack(['address', 'int24', 'int24'], [address, lowerTick, upperTick]))
+  return solidityPackedKeccak256(['address', 'int24', 'int24'], [address, lowerTick, upperTick])
 }
 
 export type SwapFunction = (
   amount: BigNumberish,
-  to: Wallet | string,
+  to: HardhatEthersSigner | string,
   sqrtPriceLimitX96?: BigNumberish
-) => Promise<ContractTransaction>
-export type SwapToPriceFunction = (sqrtPriceX96: BigNumberish, to: Wallet | string) => Promise<ContractTransaction>
+) => Promise<ContractTransactionResponse>
+export type SwapToPriceFunction = (
+  sqrtPriceX96: BigNumberish,
+  to: HardhatEthersSigner | string
+) => Promise<ContractTransactionResponse>
 export type FlashFunction = (
   amount0: BigNumberish,
   amount1: BigNumberish,
-  to: Wallet | string,
+  to: HardhatEthersSigner | string,
   pay0?: BigNumberish,
   pay1?: BigNumberish
-) => Promise<ContractTransaction>
+) => Promise<ContractTransactionResponse>
 export type MintFunction = (
   recipient: string,
   tickLower: BigNumberish,
   tickUpper: BigNumberish,
   liquidity: BigNumberish
-) => Promise<ContractTransaction>
+) => Promise<ContractTransactionResponse>
 export interface PoolFunctions {
   swapToLowerPrice: SwapToPriceFunction
   swapToHigherPrice: SwapToPriceFunction
@@ -87,31 +89,31 @@ export function createPoolFunctions({
   token1,
   pool,
 }: {
-  swapTarget: TestCLCallee
-  token0: CoreTestERC20
-  token1: CoreTestERC20
-  pool: MockTimeCLPool
+  swapTarget: Contract
+  token0: Contract
+  token1: Contract
+  pool: Contract
 }): PoolFunctions {
   async function swapToSqrtPrice(
     inputToken: Contract,
     targetPrice: BigNumberish,
-    to: Wallet | string
-  ): Promise<ContractTransaction> {
+    to: HardhatEthersSigner | string
+  ): Promise<ContractTransactionResponse> {
     const method = inputToken === token0 ? swapTarget.swapToLowerSqrtPrice : swapTarget.swapToHigherSqrtPrice
 
-    await inputToken.approve(swapTarget.address, constants.MaxUint256)
+    await inputToken.approve(await swapTarget.getAddress(), MaxUint256)
 
     const toAddress = typeof to === 'string' ? to : to.address
 
-    return method(pool.address, targetPrice, toAddress)
+    return method(await pool.getAddress(), targetPrice, toAddress)
   }
 
   async function swap(
     inputToken: Contract,
     [amountIn, amountOut]: [BigNumberish, BigNumberish],
-    to: Wallet | string,
+    to: HardhatEthersSigner | string,
     sqrtPriceLimitX96?: BigNumberish
-  ): Promise<ContractTransaction> {
+  ): Promise<ContractTransactionResponse> {
     const exactInput = amountOut === 0
 
     const method =
@@ -125,16 +127,16 @@ export function createPoolFunctions({
 
     if (typeof sqrtPriceLimitX96 === 'undefined') {
       if (inputToken === token0) {
-        sqrtPriceLimitX96 = MIN_SQRT_RATIO.add(1)
+        sqrtPriceLimitX96 = MIN_SQRT_RATIO + 1n
       } else {
-        sqrtPriceLimitX96 = MAX_SQRT_RATIO.sub(1)
+        sqrtPriceLimitX96 = MAX_SQRT_RATIO - 1n
       }
     }
-    await inputToken.approve(swapTarget.address, constants.MaxUint256)
+    await inputToken.approve(await swapTarget.getAddress(), MaxUint256)
 
     const toAddress = typeof to === 'string' ? to : to.address
 
-    return method(pool.address, exactInput ? amountIn : amountOut, toAddress, sqrtPriceLimitX96)
+    return method(await pool.getAddress(), exactInput ? amountIn : amountOut, toAddress, sqrtPriceLimitX96)
   }
 
   const swapToLowerPrice: SwapToPriceFunction = (sqrtPriceX96, to) => {
@@ -162,28 +164,28 @@ export function createPoolFunctions({
   }
 
   const mint: MintFunction = async (recipient, tickLower, tickUpper, liquidity) => {
-    await token0.approve(swapTarget.address, constants.MaxUint256)
-    await token1.approve(swapTarget.address, constants.MaxUint256)
-    return swapTarget.mint(pool.address, recipient, tickLower, tickUpper, liquidity)
+    await token0.approve(await swapTarget.getAddress(), MaxUint256)
+    await token1.approve(await swapTarget.getAddress(), MaxUint256)
+    return swapTarget.mint(await pool.getAddress(), recipient, tickLower, tickUpper, liquidity)
   }
 
   const flash: FlashFunction = async (amount0, amount1, to, pay0?: BigNumberish, pay1?: BigNumberish) => {
     const fee = await pool.fee()
+
     if (typeof pay0 === 'undefined') {
-      pay0 = BigNumber.from(amount0)
-        .mul(fee)
-        .add(1e6 - 1)
-        .div(1e6)
-        .add(amount0)
+      pay0 = (BigInt(amount0.toString()) * BigInt(fee) + BigInt(1e6 - 1)) / BigInt(1e6) + BigInt(amount0.toString())
     }
     if (typeof pay1 === 'undefined') {
-      pay1 = BigNumber.from(amount1)
-        .mul(fee)
-        .add(1e6 - 1)
-        .div(1e6)
-        .add(amount1)
+      pay1 = (BigInt(amount1.toString()) * BigInt(fee) + BigInt(1e6 - 1)) / BigInt(1e6) + BigInt(amount1.toString())
     }
-    return swapTarget.flash(pool.address, typeof to === 'string' ? to : to.address, amount0, amount1, pay0, pay1)
+    return swapTarget.flash(
+      await pool.getAddress(),
+      typeof to === 'string' ? to : to.address,
+      amount0,
+      amount1,
+      pay0,
+      pay1
+    )
   }
 
   return {
@@ -209,23 +211,29 @@ export function createMultiPoolFunctions({
   poolInput,
   poolOutput,
 }: {
-  inputToken: CoreTestERC20
-  swapTarget: TestCLRouter
-  poolInput: MockTimeCLPool
-  poolOutput: MockTimeCLPool
+  inputToken: Contract
+  swapTarget: Contract
+  poolInput: Contract
+  poolOutput: Contract
 }): MultiPoolFunctions {
-  async function swapForExact0Multi(amountOut: BigNumberish, to: Wallet | string): Promise<ContractTransaction> {
+  async function swapForExact0Multi(
+    amountOut: BigNumberish,
+    to: HardhatEthersSigner | string
+  ): Promise<ContractTransactionResponse> {
     const method = swapTarget.swapForExact0Multi
-    await inputToken.approve(swapTarget.address, constants.MaxUint256)
+    await inputToken.approve(await swapTarget.getAddress(), MaxUint256)
     const toAddress = typeof to === 'string' ? to : to.address
-    return method(toAddress, poolInput.address, poolOutput.address, amountOut)
+    return method(toAddress, await poolInput.getAddress(), await poolOutput.getAddress(), amountOut)
   }
 
-  async function swapForExact1Multi(amountOut: BigNumberish, to: Wallet | string): Promise<ContractTransaction> {
+  async function swapForExact1Multi(
+    amountOut: BigNumberish,
+    to: HardhatEthersSigner | string
+  ): Promise<ContractTransactionResponse> {
     const method = swapTarget.swapForExact1Multi
-    await inputToken.approve(swapTarget.address, constants.MaxUint256)
+    await inputToken.approve(await swapTarget.getAddress(), MaxUint256)
     const toAddress = typeof to === 'string' ? to : to.address
-    return method(toAddress, poolInput.address, poolOutput.address, amountOut)
+    return method(toAddress, await poolInput.getAddress(), await poolOutput.getAddress(), amountOut)
   }
 
   return {

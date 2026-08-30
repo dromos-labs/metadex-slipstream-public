@@ -1,23 +1,27 @@
-import { Fixture } from 'ethereum-waffle'
-import { v3RouterFixture } from './externalFixtures'
-import {
-  IWETH9,
+import type { Contract } from 'ethers'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
+import type {
+  CLFactory,
   MockTimeNonfungiblePositionManager,
   MockTimeSwapRouter,
   NonfungibleTokenPositionDescriptor,
   TestERC20,
-  ICLFactory,
-} from '../../../typechain'
+} from '../../../types/ethers-contracts/index.js'
+import type { EthersHelpers } from '../../shared/network'
+import { v3RouterFixture } from './externalFixtures'
 
-const completeFixture: Fixture<{
-  weth9: IWETH9
-  factory: ICLFactory
+export default async function completeFixture(
+  ethers: EthersHelpers,
+  wallet: HardhatEthersSigner
+): Promise<{
+  weth9: Contract
+  factory: CLFactory
   router: MockTimeSwapRouter
   nft: MockTimeNonfungiblePositionManager
   nftDescriptor: NonfungibleTokenPositionDescriptor
   tokens: [TestERC20, TestERC20, TestERC20]
-}> = async ([wallet], provider) => {
-  const { factory, weth9, router, nft, tokens, nftDescriptor } = await v3RouterFixture([wallet], provider)
+}> {
+  const { factory, weth9, router, nft, tokens, nftDescriptor } = await v3RouterFixture(ethers, wallet)
 
   return {
     weth9,
@@ -28,5 +32,3 @@ const completeFixture: Fixture<{
     nftDescriptor,
   }
 }
-
-export default completeFixture

@@ -1,0 +1,13 @@
+DepositForConcreteUnitTest
+├── When owner is zero address
+│   └── It should revert with {ZA}
+├── When caller is not token owner
+│   └── It should revert with {NA}
+├── When crediting a different owner
+│   ├── It should credit stake to owner
+│   ├── It should transfer the nft to the gauge
+│   └── It should emit Deposit for owner
+├── When credited owner withdraws
+│   └── It should return the nft to credited owner
+└── When depositing for self
+    └── It should behave like deposit

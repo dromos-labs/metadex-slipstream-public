@@ -1,27 +1,39 @@
-import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider'
+import type { ContractTransactionResponse, TransactionReceipt, TransactionResponse } from 'ethers'
 import { expect } from './expect'
-import { Contract, BigNumber, ContractTransaction } from 'ethers'
+
+type Deployable = { deploymentTransaction(): ContractTransactionResponse | null }
 
 export default async function snapshotGasCost(
   x:
     | TransactionResponse
     | Promise<TransactionResponse>
-    | ContractTransaction
-    | Promise<ContractTransaction>
+    | ContractTransactionResponse
+    | Promise<ContractTransactionResponse>
     | TransactionReceipt
-    | Promise<BigNumber>
-    | BigNumber
-    | Contract
-    | Promise<Contract>
+    | Promise<bigint>
+    | bigint
+    | Deployable
+    | Promise<Deployable>
 ): Promise<void> {
   const resolved = await x
-  if ('deployTransaction' in resolved) {
-    const receipt = await resolved.deployTransaction.wait()
-    expect(receipt.gasUsed.toNumber()).toMatchSnapshot()
-  } else if ('wait' in resolved) {
-    const waited = await resolved.wait()
-    expect(waited.gasUsed.toNumber()).toMatchSnapshot()
-  } else if (BigNumber.isBigNumber(resolved)) {
-    expect(resolved.toNumber()).toMatchSnapshot()
+  if (typeof resolved === 'bigint') {
+    expect(Number(resolved)).toMatchSnapshot()
+    return
+  }
+  if (resolved && typeof (resolved as Deployable).deploymentTransaction === 'function') {
+    const tx = (resolved as Deployable).deploymentTransaction()
+    if (tx) {
+      const receipt = await tx.wait()
+      if (receipt) expect(Number(receipt.gasUsed)).toMatchSnapshot()
+      return
+    }
+  }
+  if (resolved && typeof (resolved as TransactionResponse).wait === 'function') {
+    const receipt = await (resolved as TransactionResponse).wait()
+    if (receipt) expect(Number(receipt.gasUsed)).toMatchSnapshot()
+    return
+  }
+  if (resolved && 'gasUsed' in (resolved as TransactionReceipt)) {
+    expect(Number((resolved as TransactionReceipt).gasUsed)).toMatchSnapshot()
   }
 }

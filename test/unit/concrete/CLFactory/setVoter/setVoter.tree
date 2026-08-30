@@ -1,0 +1,12 @@
+UnitCLFactory::SetVoter
+├── when caller isn't owner
+│   └── it reverts with NotOwner
+└── when caller is owner
+    ├── when voter is already set
+    │   └── it reverts with VoterAlreadySet
+    └── when voter isn't set
+        ├── when new voter is address zero
+        │   └── it reverts with VoterIsZero
+        └── when new voter isn't address zero
+            ├── it sets voter to new voter
+            └── it emits VoterSet

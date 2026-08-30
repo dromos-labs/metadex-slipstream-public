@@ -3,11 +3,14 @@ cache/
 cache_hardhat/
 crytic-export/
 node_modules/
+/types/
 typechain/
 out/
+out-via-ir/
 broadcast
 
 .vscode
 .env
+.claude/settings.local.json
 
 echidna_*_corpus/

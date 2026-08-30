@@ -1,0 +1,19 @@
+CLGaugeCollectFeesConcreteUnitTest
+├── When the caller is not the voting rewards manager
+│   └── It should revert with {NVRM}
+├── When the gauge has no corresponding pool
+│   ├── It should return zero amounts
+│   └── It should not transfer tokens
+├── When the gauge is not activated
+│   ├── It should return zero amounts
+│   └── It should not transfer tokens
+├── When the emission cap is zero
+│   ├── It should return zero amounts
+│   └── It should not transfer tokens
+├── When no fees are claimable
+│   ├── It should return zero amounts
+│   └── It should not transfer tokens
+└── When fees are pending
+    ├── It should transfer fees directly to the voting rewards manager
+    ├── It should emit a {ClaimFees} event
+    └── It should return the claimed amounts

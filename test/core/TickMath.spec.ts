@@ -1,6 +1,6 @@
-import { BigNumber } from 'ethers'
-import { ethers } from 'hardhat'
-import { TickMathTest } from '../../typechain/TickMathTest'
+import { Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
 import { expect } from './shared/expect'
 import snapshotGasCost from './shared/snapshotGasCost'
 import { encodePriceSqrt, MIN_SQRT_RATIO, MAX_SQRT_RATIO } from './shared/utilities'
@@ -12,11 +12,24 @@ const MAX_TICK = 887272
 Decimal.config({ toExpNeg: -500, toExpPos: 500 })
 
 describe('TickMath', () => {
-  let tickMath: TickMathTest
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
 
-  before('deploy TickMathTest', async () => {
+  let tickMath: Contract
+
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+  })
+
+  const fixture = async () => {
     const factory = await ethers.getContractFactory('TickMathTest')
-    tickMath = (await factory.deploy()) as TickMathTest
+    return (await factory.deploy()) as unknown as Contract
+  }
+
+  beforeEach(async () => {
+    tickMath = await networkHelpers.loadFixture(fixture)
   })
 
   describe('#getSqrtRatioAtTick', () => {
@@ -41,11 +54,11 @@ describe('TickMath', () => {
     })
 
     it('min tick ratio is less than js implementation', async () => {
-      expect(await tickMath.getSqrtRatioAtTick(MIN_TICK)).to.be.lt(encodePriceSqrt(1, BigNumber.from(2).pow(127)))
+      expect(await tickMath.getSqrtRatioAtTick(MIN_TICK)).to.be.lt(encodePriceSqrt(1, 2n ** 127n))
     })
 
     it('max tick ratio is greater than js implementation', async () => {
-      expect(await tickMath.getSqrtRatioAtTick(MAX_TICK)).to.be.gt(encodePriceSqrt(BigNumber.from(2).pow(127), 1))
+      expect(await tickMath.getSqrtRatioAtTick(MAX_TICK)).to.be.gt(encodePriceSqrt(2n ** 127n, 1))
     })
 
     it('max tick', async () => {
@@ -53,20 +66,7 @@ describe('TickMath', () => {
     })
 
     for (const absTick of [
-      50,
-      100,
-      250,
-      500,
-      1_000,
-      2_500,
-      3_000,
-      4_000,
-      5_000,
-      50_000,
-      150_000,
-      250_000,
-      500_000,
-      738_203,
+      50, 100, 250, 500, 1_000, 2_500, 3_000, 4_000, 5_000, 50_000, 150_000, 250_000, 500_000, 738_203,
     ]) {
       for (const tick of [-absTick, absTick]) {
         describe(`tick ${tick}`, () => {
@@ -105,11 +105,11 @@ describe('TickMath', () => {
 
   describe('#getTickAtSqrtRatio', () => {
     it('throws for too low', async () => {
-      await expect(tickMath.getTickAtSqrtRatio(MIN_SQRT_RATIO.sub(1))).to.be.revertedWith('R')
+      await expect(tickMath.getTickAtSqrtRatio(MIN_SQRT_RATIO - 1n)).to.be.revertedWith('R')
     })
 
     it('throws for too high', async () => {
-      await expect(tickMath.getTickAtSqrtRatio(BigNumber.from(MAX_SQRT_RATIO))).to.be.revertedWith('R')
+      await expect(tickMath.getTickAtSqrtRatio(MAX_SQRT_RATIO)).to.be.revertedWith('R')
     })
 
     it('ratio of min tick', async () => {
@@ -122,13 +122,13 @@ describe('TickMath', () => {
       expect(await tickMath.getTickAtSqrtRatio('1461373636630004318706518188784493106690254656249')).to.eq(MAX_TICK - 1)
     })
     it('ratio closest to max tick', async () => {
-      expect(await tickMath.getTickAtSqrtRatio(MAX_SQRT_RATIO.sub(1))).to.eq(MAX_TICK - 1)
+      expect(await tickMath.getTickAtSqrtRatio(MAX_SQRT_RATIO - 1n)).to.eq(MAX_TICK - 1)
     })
 
     for (const ratio of [
       MIN_SQRT_RATIO,
-      encodePriceSqrt(BigNumber.from(10).pow(12), 1),
-      encodePriceSqrt(BigNumber.from(10).pow(6), 1),
+      encodePriceSqrt(10n ** 12n, 1),
+      encodePriceSqrt(10n ** 6n, 1),
       encodePriceSqrt(1, 64),
       encodePriceSqrt(1, 8),
       encodePriceSqrt(1, 2),
@@ -136,9 +136,9 @@ describe('TickMath', () => {
       encodePriceSqrt(2, 1),
       encodePriceSqrt(8, 1),
       encodePriceSqrt(64, 1),
-      encodePriceSqrt(1, BigNumber.from(10).pow(6)),
-      encodePriceSqrt(1, BigNumber.from(10).pow(12)),
-      MAX_SQRT_RATIO.sub(1),
+      encodePriceSqrt(1, 10n ** 6n),
+      encodePriceSqrt(1, 10n ** 12n),
+      MAX_SQRT_RATIO - 1n,
     ]) {
       describe(`ratio ${ratio}`, () => {
         it('is at most off by 1', async () => {
@@ -150,12 +150,12 @@ describe('TickMath', () => {
         it('ratio is between the tick and tick+1', async () => {
           const tick = await tickMath.getTickAtSqrtRatio(ratio)
           const ratioOfTick = await tickMath.getSqrtRatioAtTick(tick)
-          const ratioOfTickPlusOne = await tickMath.getSqrtRatioAtTick(tick + 1)
+          const ratioOfTickPlusOne = await tickMath.getSqrtRatioAtTick(tick + 1n)
           expect(ratio).to.be.gte(ratioOfTick)
           expect(ratio).to.be.lt(ratioOfTickPlusOne)
         })
         it('result', async () => {
-          expect(await tickMath.getTickAtSqrtRatio(ratio)).to.matchSnapshot()
+          expect(Number(await tickMath.getTickAtSqrtRatio(ratio))).to.matchSnapshot()
         })
         it('gas', async () => {
           await snapshotGasCost(tickMath.getGasCostOfGetTickAtSqrtRatio(ratio))

@@ -1,0 +1,27 @@
+UnitCLPool:Flash
+├── when only amount0 is gt zero
+│   ├── it calls swapHook.beforeFlash
+│   ├── it computes fee0 using before flash fee
+│   ├── it calls token0.transfer with amount0
+│   ├── it calls uniswapV3FlashCallback
+│   ├── it adds part of paid0 to feeGrowthGlobal0X128
+│   ├── it adds part of paid0 to gaugeFees.token0
+│   └── it emits Flash
+├── when only amount1 is gt zero
+│   ├── it calls swapHook.beforeFlash
+│   ├── it computes fee1 using before flash fee
+│   ├── it calls token1.transfer with amount1
+│   ├── it calls uniswapV3FlashCallback
+│   ├── it adds part of paid1 to feeGrowthGlobal1X128
+│   ├── it adds part of paid1 to gaugeFees.token1
+│   └── it emits Flash
+└── when amount0 and amount1 are gt zero
+    ├── it calls swapHook.beforeFlash
+    ├── it computes fee0 using before flash fee
+    ├── it computes fee1 using before flash fee
+    ├── it calls uniswapV3FlashCallback
+    ├── it adds part of paid0 to feeGrowthGlobal0X128
+    ├── it adds part of paid0 to gaugeFees.token0
+    ├── it adds part of paid1 to feeGrowthGlobal1X128
+    ├── it adds part of paid1 to gaugeFees.token1
+    └── it emits Flash

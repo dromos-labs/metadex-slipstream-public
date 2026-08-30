@@ -1,0 +1,11 @@
+SetApprovalForAllConcreteUnitTest
+├── When operator is zero address
+│   └── It should revert with {ZA}
+├── When granting approval
+│   ├── It should set blanket approval
+│   └── It should emit ApprovalForAll
+├── When revoking approval
+│   ├── It should clear blanket approval
+│   └── It should emit ApprovalForAll
+└── When checking another owner or operator
+    └── It should keep approval scoped to owner and operator

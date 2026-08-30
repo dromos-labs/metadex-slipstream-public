@@ -1,0 +1,6 @@
+UnitCLFactory::SetDefaultSwapHook
+├── when caller isn't swap fee manager
+│   └── it reverts with NotSwapFeeManager
+└── when caller is swap fee manager
+    ├── it sets defaultSwapHook to the new swapHook
+    └── it emits DefaultSwapHookChanged

@@ -1,0 +1,52 @@
+UnitMetaquoter::QuoteRemoveClLiquidityV3
+├── when the pool is not a registered target
+│   └── it reverts with IP
+└── given the pool is a registered target
+    ├── when the target factory is not approved
+    │   └── it reverts with AF
+    └── given the target factory is approved
+        ├── when the pool type is not CL
+        │   └── it reverts with PT
+        └── given the pool type is CL
+            ├── when the lower tick is not below the upper tick
+            │   └── it reverts with TLU
+            ├── when the lower tick is below the minimum tick
+            │   └── it reverts with TLM
+            ├── when the upper tick is above the maximum tick
+            │   └── it reverts with TUM
+            ├── when the lower tick is not aligned to the tick spacing
+            │   └── it reverts with TS
+            ├── when the upper tick is not aligned to the tick spacing
+            │   └── it reverts with TS
+            └── given the tick range is valid
+                ├── when the liquidity is zero
+                │   └── it reverts with ILB
+                ├── when the liquidity exceeds the int128 maximum
+                │   └── it reverts with LTM
+                ├── when the liquidity exceeds the gross liquidity at the lower tick
+                │   └── it reverts with LS
+                ├── when the liquidity exceeds the gross liquidity at the upper tick
+                │   └── it reverts with LS
+                ├── when the credited token1 amount exceeds the uint128 maximum
+                │   └── it reverts with AO
+                ├── when the credited token0 amount exceeds the uint128 maximum
+                │   └── it reverts with AO
+                ├── when the price is inside the range
+                │   ├── it returns both amounts rounded down at the live price
+                │   └── it returns both sides nonzero
+                ├── when the price is below the range
+                │   ├── it returns the whole range in token0
+                │   └── it returns zero as amount1
+                ├── when the price is above the range
+                │   ├── it returns the whole range in token1
+                │   └── it returns zero as amount0
+                ├── when the tick is the lower tick with the price inside it
+                │   ├── it returns both amounts rounded down at the live price
+                │   └── it returns both sides nonzero
+                ├── when the tick is the upper tick with the price inside it
+                │   └── it returns zero as amount0
+                ├── when the quote is taken at a pinned price and range
+                │   └── it returns the amounts the burn would credit
+                └── when the liquidity an add quote sized is removed again
+                    ├── it returns at most the amounts the add quote required
+                    └── it returns amounts within one wei of them

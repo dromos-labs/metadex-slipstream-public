@@ -1,0 +1,12 @@
+ApproveConcreteUnitTest
+├── When caller is not stake owner
+│   └── It should revert with {NA}
+├── When position is not staked
+│   └── It should revert with {NA}
+├── When caller is stake owner
+│   ├── It should set per token approval
+│   └── It should emit Approval
+├── When clearing approval
+│   └── It should clear per token approval
+└── When approved position is withdrawn
+    └── It should clear per token approval

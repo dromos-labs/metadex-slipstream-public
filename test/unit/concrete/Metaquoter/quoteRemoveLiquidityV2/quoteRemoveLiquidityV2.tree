@@ -1,0 +1,28 @@
+UnitMetaquoter::QuoteRemoveLiquidityV2
+├── when the pool is not a registered target
+│   └── it reverts with IP
+└── given the pool is a registered target
+    ├── when the target factory is not approved
+    │   └── it reverts with AF
+    └── given the target factory is approved
+        ├── when the total supply is zero
+        │   └── it returns amount0 and amount1 as zero
+        └── given the total supply is nonzero
+            ├── when the liquidity exceeds the total supply
+            │   └── it reverts with LTS
+            ├── when the liquidity exceeds the supply held outside the pool
+            │   └── it reverts with LTS
+            ├── when a pool balance exceeds its reserve
+            │   └── it quotes from the reserves
+            ├── when pool balances are below reserves
+            │   └── it returns amount0 and amount1 proportional to the pool's live balances
+            ├── when one balance exceeds its reserve and the other is below
+            │   └── it caps each side independently
+            ├── when a stable pool would have zero residual k
+            │   └── it reverts with KZ
+            ├── when a stable pool retains a nonzero residual k
+            │   └── it returns amount0 and amount1 proportional to the pool's live balances
+            ├── when either amount rounds to zero
+            │   └── it reverts with ILB
+            └── when the pool already holds liquidity
+                └── it reverts with KZ

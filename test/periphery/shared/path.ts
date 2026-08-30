@@ -1,4 +1,4 @@
-import { utils } from 'ethers'
+import { getAddress } from 'ethers'
 import { FeeAmount } from './constants'
 
 const ADDR_SIZE = 20
@@ -27,7 +27,7 @@ export function encodePath(path: string[], fees: FeeAmount[]): string {
 function decodeOne(tokenFeeToken: Buffer): [[string, string], number] {
   // reads the first 20 bytes for the token address
   const tokenABuf = tokenFeeToken.slice(0, ADDR_SIZE)
-  const tokenA = utils.getAddress('0x' + tokenABuf.toString('hex'))
+  const tokenA = getAddress('0x' + tokenABuf.toString('hex'))
 
   // reads the next 2 bytes for the fee
   const feeBuf = tokenFeeToken.slice(ADDR_SIZE, OFFSET)
@@ -35,7 +35,7 @@ function decodeOne(tokenFeeToken: Buffer): [[string, string], number] {
 
   // reads the next 20 bytes for the token address
   const tokenBBuf = tokenFeeToken.slice(OFFSET, DATA_SIZE)
-  const tokenB = utils.getAddress('0x' + tokenBBuf.toString('hex'))
+  const tokenB = getAddress('0x' + tokenBBuf.toString('hex'))
 
   return [[tokenA, tokenB], fee]
 }

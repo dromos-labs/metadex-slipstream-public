@@ -1,17 +1,22 @@
-import { BigNumber, BigNumberish, Wallet } from 'ethers'
-import { ethers } from 'hardhat'
-import { MockTimeCLPool } from '../../../typechain/MockTimeCLPool'
-import { CoreTestERC20 } from '../../../typechain/CoreTestERC20'
-import { CLFactory } from '../../../typechain/CLFactory'
-import { TestCLCallee } from '../../../typechain/TestCLCallee'
-import { TestCLRouter } from '../../../typechain/TestCLRouter'
-import { MockVoter } from '../../../typechain/MockVoter'
-import { CustomUnstakedFeeModule, MockFactoryRegistry, MockVotingRewardsFactory } from '../../../typechain'
-import { CLGaugeFactory } from '../../../typechain/CLGaugeFactory'
-import { CLGauge } from '../../../typechain/CLGauge'
+import type { BigNumberish } from 'ethers'
+import { ZeroAddress } from 'ethers'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
+import type {
+  CLFactory,
+  CLGauge,
+  CLGaugeFactory,
+  CoreTestERC20,
+  CustomUnstakedFeeModule,
+  MockFactoryRegistry,
+  MockTimeCLPool,
+  MockVoter,
+  MockVotingEscrow,
+  MockVotingRewardsFactory,
+  TestCLCallee,
+  TestCLRouter,
+} from '../../../types/ethers-contracts/index.js'
+import type { EthersHelpers } from '../../shared/network'
 import { encodePriceSqrt } from './utilities'
-
-import { Fixture } from 'ethereum-waffle'
 
 interface FactoryFixture {
   factory: CLFactory
@@ -23,22 +28,29 @@ interface TokensFixture {
   token2: CoreTestERC20
 }
 
-async function tokensFixture(): Promise<TokensFixture> {
+async function tokensFixture(ethers: EthersHelpers): Promise<TokensFixture> {
   const tokenFactory = await ethers.getContractFactory('CoreTestERC20')
-  const tokenA = (await tokenFactory.deploy(BigNumber.from(2).pow(255))) as CoreTestERC20
-  const tokenB = (await tokenFactory.deploy(BigNumber.from(2).pow(255))) as CoreTestERC20
-  const tokenC = (await tokenFactory.deploy(BigNumber.from(2).pow(255))) as CoreTestERC20
+  const tokenA = (await tokenFactory.deploy(2n ** 255n)) as unknown as CoreTestERC20
+  const tokenB = (await tokenFactory.deploy(2n ** 255n)) as unknown as CoreTestERC20
+  const tokenC = (await tokenFactory.deploy(2n ** 255n)) as unknown as CoreTestERC20
 
-  const [token0, token1, token2] = [tokenA, tokenB, tokenC].sort((tokenA, tokenB) =>
-    tokenA.address.toLowerCase() < tokenB.address.toLowerCase() ? -1 : 1
-  )
+  const addrs = await Promise.all([tokenA.getAddress(), tokenB.getAddress(), tokenC.getAddress()])
+  const sorted = [
+    { contract: tokenA, address: addrs[0] },
+    { contract: tokenB, address: addrs[1] },
+    { contract: tokenC, address: addrs[2] },
+  ].sort((a, b) => (a.address.toLowerCase() < b.address.toLowerCase() ? -1 : 1))
 
-  return { token0, token1, token2 }
+  return {
+    token0: sorted[0].contract,
+    token1: sorted[1].contract,
+    token2: sorted[2].contract,
+  }
 }
 
 type TokensAndFactoryFixture = FactoryFixture & TokensFixture
 
-interface PoolFixture extends TokensAndFactoryFixture {
+export interface PoolFixture extends TokensAndFactoryFixture {
   swapTargetCallee: TestCLCallee
   swapTargetRouter: TestCLRouter
   createPool(
@@ -52,10 +64,8 @@ interface PoolFixture extends TokensAndFactoryFixture {
 // Monday, October 5, 2020 9:00:00 AM GMT-05:00
 export const TEST_POOL_START_TIME = 1601906400
 
-export const poolFixture: Fixture<PoolFixture> = async function (): Promise<PoolFixture> {
-  let wallet: Wallet
-  ;[wallet] = await (ethers as any).getSigners()
-  const { token0, token1, token2 } = await tokensFixture()
+export async function poolFixture(ethers: EthersHelpers, wallet: HardhatEthersSigner): Promise<PoolFixture> {
+  const { token0, token1, token2 } = await tokensFixture(ethers)
 
   const MockTimeCLPoolDeployerFactory = await ethers.getContractFactory('CLFactory')
   const MockTimeCLPoolFactory = await ethers.getContractFactory('MockTimeCLPool')
@@ -68,47 +78,63 @@ export const poolFixture: Fixture<PoolFixture> = async function (): Promise<Pool
   const CustomUnstakedFeeModuleFactory = await ethers.getContractFactory('CustomUnstakedFeeModule')
 
   // voter & gauge factory set up
-  const mockVotingEscrow = await MockVotingEscrowFactory.deploy(wallet.address)
-  const mockFactoryRegistry = await MockFactoryRegistryFactory.deploy()
+  const mockVotingEscrow = (await MockVotingEscrowFactory.deploy(wallet.address)) as unknown as MockVotingEscrow
+  const mockFactoryRegistry = (await MockFactoryRegistryFactory.deploy()) as unknown as MockFactoryRegistry
   const mockVoter = (await MockVoterFactory.deploy(
-    token2.address,
-    mockFactoryRegistry.address,
-    mockVotingEscrow.address,
-    '0x0000000000000000000000000000000000000000'
-  )) as MockVoter
-  const gaugeImplementation = (await GaugeImplementationFactory.deploy()) as CLGauge
+    await token2.getAddress(),
+    await mockFactoryRegistry.getAddress(),
+    await mockVotingEscrow.getAddress()
+  )) as unknown as MockVoter
+  const mockVotingRewardsFactory =
+    (await MockVotingRewardsFactoryFactory.deploy()) as unknown as MockVotingRewardsFactory
   const gaugeFactory = (await GaugeFactoryFactory.deploy(
-    wallet.address,
-    mockVoter.address,
+    await mockVoter.getAddress(),
+    await mockVoter.getAddress(), // gauge manager, played by the mock voter in tests
+    await mockVotingRewardsFactory.getAddress(),
     '0x0000000000000000000000000000000000000001',
-    gaugeImplementation.address
-  )) as CLGaugeFactory
+    {
+      capAdmin: wallet.address,
+      referralAdmin: wallet.address,
+      penaltyAdmin: wallet.address,
+      capOperator: wallet.address,
+    },
+    {
+      defaultCap: 10n ** 18n,
+      operatorMinCap: 1,
+      operatorMaxCap: 10n ** 18n,
+      maxMinStakeBlocks: 7 * 24 * 60 * 60,
+    }
+  )) as unknown as CLGaugeFactory
+  const gaugeImplementation = GaugeImplementationFactory.attach(
+    await gaugeFactory.implementation()
+  ) as unknown as CLGauge
+  await gaugeFactory.setPenaltyConfig(0, 0)
 
-  const mockTimePool = (await MockTimeCLPoolFactory.deploy()) as MockTimeCLPool
+  const mockTimePool = (await MockTimeCLPoolFactory.deploy()) as unknown as MockTimeCLPool
   const mockTimePoolDeployer = (await MockTimeCLPoolDeployerFactory.deploy(
     wallet.address,
     wallet.address,
     wallet.address,
-    mockVoter.address,
-    mockTimePool.address
-  )) as CLFactory
+    await mockVoter.getAddress(),
+    await mockTimePool.getAddress(),
+    await mockFactoryRegistry.getAddress(),
+    ZeroAddress, // defaultSwapHook
+    wallet.address,
+    wallet.address // clPoolTapeManager
+  )) as unknown as CLFactory
   const customUnstakedFeeModule = (await CustomUnstakedFeeModuleFactory.deploy(
-    mockTimePoolDeployer.address
-  )) as CustomUnstakedFeeModule
-  await mockTimePoolDeployer.setUnstakedFeeModule(customUnstakedFeeModule.address)
-  // approve pool factory <=> gauge factory combination
-  const mockVotingRewardsFactory = (await MockVotingRewardsFactoryFactory.deploy()) as MockVotingRewardsFactory
-  await mockFactoryRegistry.approve(
-    mockTimePoolDeployer.address,
-    mockVotingRewardsFactory.address, // unused in hardhat tests
-    gaugeFactory.address
-  )
+    await mockTimePoolDeployer.getAddress()
+  )) as unknown as CustomUnstakedFeeModule
+  await mockTimePoolDeployer.setUnstakedFeeModule(await customUnstakedFeeModule.getAddress())
+  // link pool factory <=> gauge factory combination
+  await mockFactoryRegistry.registerFactories(await gaugeFactory.getAddress(), await mockTimePoolDeployer.getAddress())
 
   const calleeContractFactory = await ethers.getContractFactory('TestCLCallee')
   const routerContractFactory = await ethers.getContractFactory('TestCLRouter')
 
-  const swapTargetCallee = (await calleeContractFactory.deploy()) as TestCLCallee
-  const swapTargetRouter = (await routerContractFactory.deploy()) as TestCLRouter
+  const swapTargetCallee = (await calleeContractFactory.deploy()) as unknown as TestCLCallee
+  const swapTargetRouter = (await routerContractFactory.deploy()) as unknown as TestCLRouter
+
   return {
     token0,
     token1,
@@ -126,18 +152,22 @@ export const poolFixture: Fixture<PoolFixture> = async function (): Promise<Pool
     ) => {
       // add tick spacing if not already added, backwards compatible with CL tests
       const tickSpacingFee = await mockTimePoolDeployer.tickSpacingToFee(tickSpacing)
-      if (tickSpacingFee == 0) await mockTimePoolDeployer['enableTickSpacing(int24,uint24)'](tickSpacing, fee)
+      if (tickSpacingFee === 0n) await mockTimePoolDeployer['enableTickSpacing(int24,uint24)'](tickSpacing, fee)
       const tx = await mockTimePoolDeployer['createPool(address,address,int24,uint160)'](
-        firstToken.address,
-        secondToken.address,
+        await firstToken.getAddress(),
+        await secondToken.getAddress(),
         tickSpacing,
         sqrtPriceX96
       )
       const receipt = await tx.wait()
-      const poolAddress = receipt.events?.[1].args?.pool as string
-      const pool = MockTimeCLPoolFactory.attach(poolAddress) as MockTimeCLPool
+      if (!receipt) throw new Error('createPool: no receipt')
+      const poolCreatedTopic = mockTimePoolDeployer.interface.getEvent('PoolCreated').topicHash
+      const poolCreatedLog = receipt.logs.find((log) => log.topics[0] === poolCreatedTopic)
+      if (!poolCreatedLog) throw new Error('PoolCreated event not found in createPool receipt')
+      const poolAddress = mockTimePoolDeployer.interface.parseLog(poolCreatedLog)!.args.pool as string
+      const pool = MockTimeCLPoolFactory.attach(poolAddress) as unknown as MockTimeCLPool
       await pool.advanceTime(TEST_POOL_START_TIME)
-      customUnstakedFeeModule.setCustomFee(poolAddress, 420)
+      await customUnstakedFeeModule.setCustomFee(poolAddress, 420)
       return pool
     },
   }

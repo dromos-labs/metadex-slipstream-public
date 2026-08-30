@@ -1,0 +1,12 @@
+UnitSwapHookLib::GetFlashFee
+├── when swapHook is address zero
+│   ├── it calls tickSpacingToFee on the factory
+│   └── it returns tick-spacing fee from the factory call
+└── when swapHook isn't address zero
+    ├── when call fails
+    │   ├── it calls tickSpacingToFee on the factory
+    │   └── it returns tick-spacing fee from the factory call
+    ├── when call succeeds but fee is gt fee ceil
+    │   └── it returns _SWAP_FEE_CEIL
+    └── when call succeeds and fee is leq fee ceil
+        └── it returns fee from returndata of the call

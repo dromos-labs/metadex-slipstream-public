@@ -1,7 +1,7 @@
-import { Fixture } from 'ethereum-waffle'
-import { BigNumber, BigNumberish, constants, Contract, Wallet } from 'ethers'
-import { ethers, waffle } from 'hardhat'
-import { MockTimeNonfungiblePositionManager, TestERC20, TickLensTest } from '../../typechain'
+import { Contract, MaxUint256 } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
 import completeFixture from './shared/completeFixture'
 import { FeeAmount, TICK_SPACINGS } from './shared/constants'
 import { encodePriceSqrt } from './shared/encodePriceSqrt'
@@ -11,17 +11,29 @@ import { computePoolAddress } from './shared/computePoolAddress'
 import snapshotGasCost from './shared/snapshotGasCost'
 
 describe('TickLens', () => {
-  let wallets: Wallet[]
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
+  let wallets: HardhatEthersSigner[]
 
-  const nftFixture: Fixture<{
-    factory: Contract
-    nft: MockTimeNonfungiblePositionManager
-    tokens: [TestERC20, TestERC20, TestERC20]
-  }> = async (wallets, provider) => {
-    const { factory, tokens, nft } = await completeFixture(wallets, provider)
+  let factory: Contract
+  let nft: Contract
+  let tokens: [Contract, Contract, Contract]
+  let poolAddress: string
+  let tickLens: Contract
+
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+    wallets = await ethers.getSigners()
+  })
+
+  const nftFixture = async () => {
+    const [wallet] = await ethers.getSigners()
+    const { factory, tokens, nft } = await completeFixture(ethers, wallet)
 
     for (const token of tokens) {
-      await token.approve(nft.address, constants.MaxUint256)
+      await token.approve(await nft.getAddress(), MaxUint256)
     }
 
     return {
@@ -31,21 +43,8 @@ describe('TickLens', () => {
     }
   }
 
-  let factory: Contract
-  let nft: MockTimeNonfungiblePositionManager
-  let tokens: [TestERC20, TestERC20, TestERC20]
-  let poolAddress: string
-  let tickLens: TickLensTest
-
-  let loadFixture: ReturnType<typeof waffle.createFixtureLoader>
-
-  before('create fixture loader', async () => {
-    wallets = await (ethers as any).getSigners()
-    loadFixture = waffle.createFixtureLoader(wallets)
-  })
-
   beforeEach('load fixture', async () => {
-    ;({ factory, tokens, nft } = await loadFixture(nftFixture))
+    ;({ factory, tokens, nft } = await networkHelpers.loadFixture(nftFixture))
   })
 
   describe('#getPopulatedTicksInWord', () => {
@@ -79,10 +78,10 @@ describe('TickLens', () => {
       return nft.mint(liquidityParams)
     }
 
-    async function mint(tickLower: number, tickUpper: number, amountBothDesired: BigNumberish): Promise<number> {
+    async function mint(tickLower: number, tickUpper: number, amountBothDesired: bigint | number): Promise<number> {
       const mintParams = {
-        token0: tokens[0].address,
-        token1: tokens[1].address,
+        token0: await tokens[0].getAddress(),
+        token1: await tokens[1].getAddress(),
         tickSpacing: TICK_SPACINGS[FeeAmount.MEDIUM],
         tickLower,
         tickUpper,
@@ -95,30 +94,33 @@ describe('TickLens', () => {
         sqrtPriceX96: 0,
       }
 
-      const { liquidity } = await nft.callStatic.mint(mintParams)
+      const { liquidity } = await nft.mint.staticCall(mintParams)
 
       await nft.mint(mintParams)
-      return liquidity.toNumber()
+      return Number(liquidity)
     }
 
     beforeEach(async () => {
-      await createPool(tokens[0].address, tokens[1].address)
+      await createPool(await tokens[0].getAddress(), await tokens[1].getAddress())
       poolAddress = await computePoolAddress(
-        factory.address,
-        [tokens[0].address, tokens[1].address],
-        TICK_SPACINGS[FeeAmount.MEDIUM]
+        await factory.getAddress(),
+        [await tokens[0].getAddress(), await tokens[1].getAddress()],
+        TICK_SPACINGS[FeeAmount.MEDIUM],
+        factory
       )
     })
 
     beforeEach(async () => {
       const lensFactory = await ethers.getContractFactory('TickLensTest')
-      tickLens = (await lensFactory.deploy()) as TickLensTest
+      tickLens = (await lensFactory.deploy()) as unknown as Contract
     })
 
-    function getTickBitmapIndex(tick: BigNumberish, tickSpacing: number): BigNumber {
-      const intermediate = BigNumber.from(tick).div(tickSpacing)
+    function getTickBitmapIndex(tick: bigint | number, tickSpacing: number): bigint {
+      const tickBig = BigInt(tick)
+      const tickSpacingBig = BigInt(tickSpacing)
+      const intermediate = tickBig / tickSpacingBig
       // see https://docs.soliditylang.org/en/v0.7.6/types.html#shifts
-      return intermediate.lt(0) ? intermediate.add(1).div(BigNumber.from(2).pow(8)).sub(1) : intermediate.shr(8)
+      return intermediate < 0n ? (intermediate + 1n) / 2n ** 8n - 1n : intermediate >> 8n
     }
 
     async function estimateGasCostsFetchingByTick(wordCount: number) {

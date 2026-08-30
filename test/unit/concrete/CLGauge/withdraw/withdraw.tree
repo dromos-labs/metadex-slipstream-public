@@ -3,36 +3,88 @@ WithdrawConcreteUnitTest
 │   └── It should revert with {NA}
 └── When the caller is the token owner
     ├── When there are no accrued rewards
+    │   ├── It should settle the pool rewards
+    │   ├── It should not forfeit emissions
+    │   ├── It should not mint emissions
     │   ├── It should unstake liquidity from the pool
-    │   └── It should clear the deposit timestamp
+    │   ├── It should clear the deposit block
+    │   ├── It should return the NFT to the owner
+    │   └── It should emit a {Withdraw} event
     └── When there are accrued rewards
         ├── When penalty rate is zero
-        │   ├── It should transfer full rewards to owner
-        │   ├── It should emit a {ClaimRewards} event
-        │   ├── It should unstake liquidity from the pool
-        │   ├── It should return the NFT to the owner
-        │   └── It should emit a {Withdraw} event
+        │   ├── When emission minting reverts
+        │   │   ├── It should settle the pool rewards
+        │   │   ├── It should advance the position reward growth
+        │   │   ├── It should attempt to mint emissions
+        │   │   ├── It should store the LP emissions on the account
+        │   │   ├── It should store the referral emissions on the referral
+        │   │   ├── It should preserve older deferred emissions
+        │   │   ├── It should emit a {ReferralEmissionsDeferred} event
+        │   │   ├── It should emit an {EmissionsDeferred} event
+        │   │   ├── It should unstake liquidity from the pool
+        │   │   ├── It should return the NFT to the owner
+        │   │   └── It should emit a {Withdraw} event
+        │   └── When emission minting does not revert
+        │       ├── It should settle the pool rewards
+        │       ├── It should advance the position reward growth
+        │       ├── It should not forfeit emissions
+        │       ├── It should emit a {ReferralEmissionsDeferred} event
+        │       ├── It should emit a {EmissionsClaimed} event
+        │       ├── It should mint LP emissions to owner
+        │       ├── It should store the referral emissions on the referral
+        │       ├── It should preserve older deferred emissions
+        │       ├── It should unstake liquidity from the pool
+        │       ├── It should return the NFT to the owner
+        │       └── It should emit a {Withdraw} event
         └── When penalty rate is greater than zero
-            ├── When called within min stake time
+            ├── When called within min stake blocks
             │   ├── When penalty rounds down to zero
-            │   │   └── It should transfer full rewards to owner
+            │   │   ├── It should settle the pool rewards
+            │   │   ├── It should advance the position reward growth
+            │   │   ├── It should not forfeit emissions
+            │   │   ├── It should emit a {EmissionsClaimed} event
+            │   │   └── It should mint full emissions to owner
             │   └── When penalty does not round down to zero
             │       ├── When there are no remaining rewards after penalty
-            │       │   ├── It should transfer penalty to minter
+            │       │   ├── It should settle the pool rewards
+            │       │   ├── It should advance the position reward growth
             │       │   ├── It should emit a {EarlyWithdrawPenalty} event
+            │       │   ├── It should forfeit all emissions
+            │       │   ├── It should not mint emissions
             │       │   ├── It should unstake liquidity from the pool
             │       │   ├── It should return the NFT to the owner
             │       │   └── It should emit a {Withdraw} event
             │       └── When there are remaining rewards after penalty
-            │           ├── It should transfer penalty to minter
-            │           ├── It should emit a {EarlyWithdrawPenalty} event
-            │           ├── It should transfer remaining rewards to owner
-            │           ├── It should unstake liquidity from the pool
-            │           ├── It should return the NFT to the owner
-            │           └── It should emit a {Withdraw} event
-            └── When called after min stake time
-                ├── It should transfer full rewards to owner
-                ├── It should emit a {ClaimRewards} event
+            │           ├── When emission minting does not revert_
+            │           │   ├── It should settle the pool rewards
+            │           │   ├── It should advance the position reward growth
+            │           │   ├── It should emit a {EarlyWithdrawPenalty} event
+            │           │   ├── It should emit a {EmissionsClaimed} event
+            │           │   ├── It should forfeit the penalty emissions
+            │           │   ├── It should mint remaining emissions to owner
+            │           │   ├── It should unstake liquidity from the pool
+            │           │   ├── It should return the NFT to the owner
+            │           │   └── It should emit a {Withdraw} event
+            │           └── When emission minting reverts_
+            │               ├── It should settle the pool rewards
+            │               ├── It should advance the position reward growth
+            │               ├── It should apply the penalty before the referral
+            │               ├── It should forfeit the rollover together with the penalty emissions
+            │               ├── It should attempt to mint emissions
+            │               ├── It should store the post-penalty LP emissions on the account
+            │               ├── It should store the post-penalty referral emissions on the referral
+            │               ├── It should emit an {EarlyWithdrawPenalty} event
+            │               ├── It should emit a {ReferralEmissionsDeferred} event
+            │               ├── It should emit an {EmissionsDeferred} event
+            │               ├── It should unstake liquidity from the pool
+            │               ├── It should return the NFT to the owner
+            │               └── It should emit a {Withdraw} event
+            └── When called after min stake blocks
+                ├── It should settle the pool rewards
+                ├── It should advance the position reward growth
+                ├── It should not forfeit emissions
+                ├── It should emit a {EmissionsClaimed} event
+                ├── It should mint full emissions to owner
                 ├── It should unstake liquidity from the pool
                 ├── It should return the NFT to the owner
                 └── It should emit a {Withdraw} event

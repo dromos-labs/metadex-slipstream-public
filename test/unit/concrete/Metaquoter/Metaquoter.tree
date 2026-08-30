@@ -1,0 +1,98 @@
+UnitMetaquoter::quoteExactOutput
+├── when the path is empty
+│   └── it reverts with EP
+└── given the path is not empty
+    ├── when a pool factory is not approved
+    │   └── it reverts with AF
+    └── given the pool factory is approved
+        ├── when the pool is not a registered target
+        │   └── it reverts with IP
+        └── given the pool is a registered target
+            ├── when tokenIn is not a token of its hop pool
+            │   └── it reverts with TI
+            └── given tokenIn is a token of its hop pool
+                ├── when the route is a single CL pool
+                │   ├── it sizes the hop input from the exact output
+                │   └── it populates the lists at the pool index
+                ├── when the route has multiple CL hops
+                │   ├── it sizes each hop input backward from the exact output
+                │   ├── it populates the lists at each index
+                │   └── it returns the first hop input as amountIn
+                ├── when the route is a single V2 pool
+                │   ├── it returns the getAmountInWithTotalFee quote
+                │   └── it leaves the lists zeroed at the pool index
+                ├── when the route mixes CL and V2 hops
+                │   ├── it sizes each hop input backward through both pool kinds
+                │   ├── it populates only the CL entries
+                │   └── it returns the first hop input as amountIn
+                ├── when a pool reports an unknown pool type
+                │   ├── it does not read the factory pause flag
+                │   ├── it does not read the pool tokens
+                │   └── it reverts with PT
+                └── when a V2 hop quotes zero input
+                    └── it reverts with II
+
+UnitMetaquoter::quoteExactInputSingleV2
+├── when the pool factory is not approved
+│   └── it reverts with AF
+└── given the pool factory is approved
+    ├── when the pool is not a registered target
+    │   └── it reverts with IP
+    └── given the pool is a registered target
+        ├── when the pool type is not a V2 type
+        │   └── it reverts with PT
+        └── given the pool type is a V2 type
+            ├── when the pool factory is paused
+            │   └── it reverts with PS
+            ├── when tokenIn is not a pool token
+            │   └── it reverts with TI
+            └── given tokenIn is a pool token
+                ├── when the pool is V2 stable
+                │   └── it returns the getAmountOutWithTotalFee quote
+                ├── when the pool is V2 volatile
+                │   └── it returns the getAmountOutWithTotalFee quote
+                └── when the pool quotes zero output
+                    └── it reverts with IO
+
+UnitMetaquoter::quoteExactOutputSingleV2
+├── when the pool factory is not approved
+│   └── it reverts with AF
+└── given the pool factory is approved
+    ├── when the pool is not a registered target
+    │   └── it reverts with IP
+    └── given the pool is a registered target
+        ├── when the pool type is not a V2 type
+        │   └── it reverts with PT
+        └── given the pool type is a V2 type
+            ├── when the pool factory is paused
+            │   └── it reverts with PS
+            ├── when tokenIn is not a pool token
+            │   └── it reverts with TI
+            └── given tokenIn is a pool token
+                ├── when the pool is V2 stable
+                │   └── it returns the getAmountInWithTotalFee quote
+                ├── when the pool is V2 volatile
+                │   └── it returns the getAmountInWithTotalFee quote
+                └── when the pool quotes zero input
+                    └── it reverts with II
+
+UnitMetaquoter::uniswapV3SwapCallback
+├── when both deltas are non positive
+│   └── it reverts with ZL
+└── given a positive delta
+    ├── when the caller is not the encoded pool
+    │   └── it reverts with MS
+    └── given the caller is the encoded pool
+        ├── given an exact input simulation
+        │   ├── when the input token is token0
+        │   │   └── it reverts with the received amount and the pool price and tick
+        │   └── when the input token is token1
+        │       └── it reverts with the received amount and the pool price and tick
+        └── given an exact output simulation
+            ├── when no output is expected
+            │   └── it reverts with the payable amount and the pool price and tick
+            └── given an output is expected
+                ├── when the received amount differs from the expected output
+                │   └── it reverts with OC
+                └── when the received amount matches the expected output
+                    └── it reverts with the payable amount and the pool price and tick

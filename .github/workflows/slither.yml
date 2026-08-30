@@ -1,0 +1,34 @@
+name: slither
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Slither Analysis (disabled)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: install-tools
+        uses: ./.github/workflows/install-tools
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install slither + solc-select
+        run: pip install slither-analyzer solc-select
+
+      - name: Install solc 0.8.35
+        run: solc-select install 0.8.35
+
+      # Uncomment and edit the path(s) below to enable slither on specific files.
+      # - name: Run slither
+      #   run: yarn lint:slither contracts/hooks/SomeHook.sol

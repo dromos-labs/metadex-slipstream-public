@@ -1,0 +1,9 @@
+UnitCLPool::GetFeeGrowthInside
+├── when tickLower is gt tick upper
+│   └── it reverts with TLU
+├── when tick lower is lt MIN_TICK
+│   └── it reverts with TLM
+├── when tick upper is gt MAX_TICK
+│   └── it reverts with TUM
+└── when tick range is valid
+    └── it returns a fee growth inside a given range

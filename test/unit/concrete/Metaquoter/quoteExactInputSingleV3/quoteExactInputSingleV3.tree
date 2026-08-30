@@ -1,0 +1,35 @@
+UnitMetaquoter::QuoteExactInputSingleV3
+├── when the pool factory is not approved
+│   └── it reverts with AF
+└── given the pool factory is approved
+    ├── when the pool is not a registered target
+    │   └── it reverts with IP
+    └── given the pool is a registered target
+        ├── when the pool type is not CL
+        │   └── it reverts with PT
+        └── given the pool type is CL
+            ├── when tokenIn is not a pool token
+            │   └── it reverts with TI
+            └── given tokenIn is a pool token
+                ├── given no price limit
+                │   ├── when tokenIn is token0
+                │   │   ├── it simulates the swap zeroForOne with the minimum price limit
+                │   │   └── it returns the decoded quote and the initialized ticks crossed
+                │   └── when tokenIn is token1
+                │       ├── it simulates the swap oneForZero with the maximum price limit
+                │       └── it returns the decoded quote and the initialized ticks crossed
+                ├── given a price limit
+                │   └── when the input swap is simulated
+                │       └── it forwards the price limit to the pool
+                ├── when the pool swap does not revert
+                │   └── it reverts with NC
+                ├── when the pool reverts with a reason string
+                │   └── it bubbles the reason string
+                ├── when the pool reverts with a payload shorter than an error string
+                │   └── it reverts with Unexpected error
+                ├── when the swap crosses initialized ticks
+                │   └── it returns the number of initialized ticks crossed
+                ├── when the swap starts on an initialized tick
+                │   └── it excludes the starting tick from the count
+                └── when a downward swap ends on an initialized tick
+                    └── it excludes the ending tick from the count

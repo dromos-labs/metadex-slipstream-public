@@ -1,6 +1,7 @@
-import { ethers, waffle } from 'hardhat'
-import { BigNumber } from 'ethers'
-import { MockTimeNonfungiblePositionManager, PairFlash, TestERC20, ICLFactory, Quoter } from '../../typechain'
+import { Contract } from 'ethers'
+import { network } from 'hardhat'
+import type { EthersHelpers, NetHelpers } from '../shared/network'
+import type { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types'
 import completeFixture from './shared/completeFixture'
 import { FeeAmount, MaxUint128, TICK_SPACINGS } from './shared/constants'
 import { encodePriceSqrt } from './shared/encodePriceSqrt'
@@ -11,18 +12,26 @@ import { getMaxTick, getMinTick } from './shared/ticks'
 import { computePoolAddress } from './shared/computePoolAddress'
 
 describe('PairFlash test', () => {
-  const provider = waffle.provider
-  const wallets = waffle.provider.getWallets()
-  const wallet = wallets[0]
+  let ethers: EthersHelpers
+  let networkHelpers: NetHelpers
 
-  let flash: PairFlash
-  let nft: MockTimeNonfungiblePositionManager
-  let token0: TestERC20
-  let token1: TestERC20
-  let factory: ICLFactory
-  let quoter: Quoter
+  let wallet: HardhatEthersSigner
 
-  async function createPool(tokenAddressA: string, tokenAddressB: string, tickSpacing: number, price: BigNumber) {
+  let flash: Contract
+  let nft: Contract
+  let token0: Contract
+  let token1: Contract
+  let factory: Contract
+  let quoter: Contract
+
+  before(async () => {
+    const conn = await network.create()
+    ethers = conn.ethers
+    networkHelpers = conn.networkHelpers
+    ;[wallet] = await ethers.getSigners()
+  })
+
+  async function createPool(tokenAddressA: string, tokenAddressB: string, tickSpacing: number, price: bigint) {
     if (tokenAddressA.toLowerCase() > tokenAddressB.toLowerCase())
       [tokenAddressA, tokenAddressB] = [tokenAddressB, tokenAddressA]
 
@@ -47,15 +56,22 @@ describe('PairFlash test', () => {
   }
 
   const flashFixture = async () => {
-    const { router, tokens, factory, weth9, nft } = await completeFixture(wallets, provider)
+    const { router, tokens, factory, weth9, nft } = await completeFixture(ethers, wallet)
     const token0 = tokens[0]
     const token1 = tokens[1]
 
     const flashContractFactory = await ethers.getContractFactory('PairFlash')
-    const flash = (await flashContractFactory.deploy(router.address, factory.address, weth9.address)) as PairFlash
+    const flash = (await flashContractFactory.deploy(
+      await router.getAddress(),
+      await factory.getAddress(),
+      await weth9.getAddress()
+    )) as unknown as Contract
 
     const quoterFactory = await ethers.getContractFactory('Quoter')
-    const quoter = (await quoterFactory.deploy(factory.address, weth9.address)) as Quoter
+    const quoter = (await quoterFactory.deploy(
+      await factory.getAddress(),
+      await weth9.getAddress()
+    )) as unknown as Contract
 
     return {
       token0,
@@ -69,20 +85,29 @@ describe('PairFlash test', () => {
     }
   }
 
-  let loadFixture: ReturnType<typeof waffle.createFixtureLoader>
-
-  before('create fixture loader', async () => {
-    loadFixture = waffle.createFixtureLoader(wallets)
-  })
-
   beforeEach('load fixture', async () => {
-    ;({ factory, token0, token1, flash, nft, quoter } = await loadFixture(flashFixture))
+    ;({ factory, token0, token1, flash, nft, quoter } = await networkHelpers.loadFixture(flashFixture))
 
-    await token0.approve(nft.address, MaxUint128)
-    await token1.approve(nft.address, MaxUint128)
-    await createPool(token0.address, token1.address, TICK_SPACINGS[FeeAmount.LOW], encodePriceSqrt(5, 10))
-    await createPool(token0.address, token1.address, TICK_SPACINGS[FeeAmount.MEDIUM], encodePriceSqrt(1, 1))
-    await createPool(token0.address, token1.address, TICK_SPACINGS[FeeAmount.HIGH], encodePriceSqrt(20, 10))
+    await token0.approve(await nft.getAddress(), MaxUint128)
+    await token1.approve(await nft.getAddress(), MaxUint128)
+    await createPool(
+      await token0.getAddress(),
+      await token1.getAddress(),
+      TICK_SPACINGS[FeeAmount.LOW],
+      encodePriceSqrt(5, 10)
+    )
+    await createPool(
+      await token0.getAddress(),
+      await token1.getAddress(),
+      TICK_SPACINGS[FeeAmount.MEDIUM],
+      encodePriceSqrt(1, 1)
+    )
+    await createPool(
+      await token0.getAddress(),
+      await token1.getAddress(),
+      TICK_SPACINGS[FeeAmount.HIGH],
+      encodePriceSqrt(20, 10)
+    )
   })
 
   describe('flash', () => {
@@ -94,9 +119,14 @@ describe('PairFlash test', () => {
       const fee0 = Math.ceil((amount0In * FeeAmount.MEDIUM) / 1000000)
       const fee1 = Math.ceil((amount1In * FeeAmount.MEDIUM) / 1000000)
 
+      const token0Addr = await token0.getAddress()
+      const token1Addr = await token1.getAddress()
+      const flashAddr = await flash.getAddress()
+      const factoryAddr = await factory.getAddress()
+
       const flashParams = {
-        token0: token0.address,
-        token1: token1.address,
+        token0: token0Addr,
+        token1: token1Addr,
         tickSpacing1: TICK_SPACINGS[FeeAmount.MEDIUM],
         amount0: amount0In,
         amount1: amount1In,
@@ -105,31 +135,34 @@ describe('PairFlash test', () => {
       }
       // pool1 is the borrow pool
       const pool1 = await computePoolAddress(
-        factory.address,
-        [token0.address, token1.address],
-        TICK_SPACINGS[FeeAmount.MEDIUM]
+        factoryAddr,
+        [token0Addr, token1Addr],
+        TICK_SPACINGS[FeeAmount.MEDIUM],
+        factory
       )
       const pool2 = await computePoolAddress(
-        factory.address,
-        [token0.address, token1.address],
-        TICK_SPACINGS[FeeAmount.LOW]
+        factoryAddr,
+        [token0Addr, token1Addr],
+        TICK_SPACINGS[FeeAmount.LOW],
+        factory
       )
       const pool3 = await computePoolAddress(
-        factory.address,
-        [token0.address, token1.address],
-        TICK_SPACINGS[FeeAmount.HIGH]
+        factoryAddr,
+        [token0Addr, token1Addr],
+        TICK_SPACINGS[FeeAmount.HIGH],
+        factory
       )
 
-      const expectedAmountOut0 = await quoter.callStatic.quoteExactInputSingle(
-        token1.address,
-        token0.address,
+      const expectedAmountOut0 = await quoter.quoteExactInputSingle.staticCall(
+        token1Addr,
+        token0Addr,
         TICK_SPACINGS[FeeAmount.LOW],
         amount1In,
         encodePriceSqrt(20, 10)
       )
-      const expectedAmountOut1 = await quoter.callStatic.quoteExactInputSingle(
-        token0.address,
-        token1.address,
+      const expectedAmountOut1 = await quoter.quoteExactInputSingle.staticCall(
+        token0Addr,
+        token1Addr,
         TICK_SPACINGS[FeeAmount.HIGH],
         amount0In,
         encodePriceSqrt(5, 10)
@@ -137,17 +170,17 @@ describe('PairFlash test', () => {
 
       await expect(flash.initFlash(flashParams))
         .to.emit(token0, 'Transfer')
-        .withArgs(pool1, flash.address, amount0In)
+        .withArgs(pool1, flashAddr, amount0In)
         .to.emit(token1, 'Transfer')
-        .withArgs(pool1, flash.address, amount1In)
+        .withArgs(pool1, flashAddr, amount1In)
         .to.emit(token0, 'Transfer')
-        .withArgs(pool2, flash.address, expectedAmountOut0)
+        .withArgs(pool2, flashAddr, expectedAmountOut0)
         .to.emit(token1, 'Transfer')
-        .withArgs(pool3, flash.address, expectedAmountOut1)
+        .withArgs(pool3, flashAddr, expectedAmountOut1)
         .to.emit(token0, 'Transfer')
-        .withArgs(flash.address, wallet.address, expectedAmountOut0.toNumber() - amount0In - fee0)
+        .withArgs(flashAddr, wallet.address, Number(expectedAmountOut0) - amount0In - fee0)
         .to.emit(token1, 'Transfer')
-        .withArgs(flash.address, wallet.address, expectedAmountOut1.toNumber() - amount1In - fee1)
+        .withArgs(flashAddr, wallet.address, Number(expectedAmountOut1) - amount1In - fee1)
     })
 
     it('gas', async () => {
@@ -155,8 +188,8 @@ describe('PairFlash test', () => {
       const amount1In = 1000
 
       const flashParams = {
-        token0: token0.address,
-        token1: token1.address,
+        token0: await token0.getAddress(),
+        token1: await token1.getAddress(),
         tickSpacing1: TICK_SPACINGS[FeeAmount.MEDIUM],
         amount0: amount0In,
         amount1: amount1In,

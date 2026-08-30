@@ -1,0 +1,10 @@
+UnitCLPool::GetSecondsPerStakedLiquidityCumulativeX128
+├── when stakedLiquidity is eq to zero
+│   └── it should return the stored cumulative unchanged
+└── when stakedLiquidity is gt zero
+    ├── when no time has elapsed since lastUpdated
+    │   └── it should return the stored cumulative unchanged
+    └── when time has elapsed since lastUpdated
+        ├── it should return the stored cumulative plus elapsed over staked
+        └── when given a concrete stored cumulative and staked liquidity
+            └── it should return the stored cumulative plus the rounded elapsed over staked
