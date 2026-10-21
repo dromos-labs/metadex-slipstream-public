@@ -1,0 +1,314 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+pragma solidity =0.7.6;
+pragma abicoder v2;
+
+import '../gauge/interfaces/ILeafVoter.sol';
+import './CLPool.sol';
+import './indexation/CLFactoryIndexation.sol';
+import './interfaces/ICLFactory.sol';
+import './interfaces/IFactoryRegistry.sol';
+import './interfaces/fees/IFeeModule.sol';
+import '@openzeppelin/contracts/proxy/Clones.sol';
+
+/// @title Canonical CL factory
+/// @notice Deploys CL pools and manages ownership and control over pool protocol fees
+contract CLFactory is CLFactoryIndexation, ICLFactory {
+  /// @inheritdoc ICLFactory
+  ILeafVoter public override voter;
+  /// @inheritdoc ICLFactory
+  address public immutable override poolImplementation;
+  /// @inheritdoc ICLFactory
+  address public immutable override positionManager;
+  /// @inheritdoc ICLFactory
+  IFactoryRegistry public immutable override factoryRegistry;
+  /// @inheritdoc ICLFactory
+  address public override owner;
+  /// @inheritdoc ICLFactory
+  address public override swapFeeManager;
+  /// @inheritdoc ICLFactory
+  address public override unstakedFeeManager;
+  /// @inheritdoc ICLFactory
+  address public override unstakedFeeModule;
+  /// @inheritdoc ICLFactory
+  address public override defaultSwapHook;
+  /// @inheritdoc ICLFactory
+  mapping(address => address) public override poolSwapHook;
+  /// @inheritdoc ICLFactory
+  uint24 public override defaultUnstakedFee;
+  /// @inheritdoc ICLFactory
+  address public override discountRegistryManager;
+  /// @inheritdoc ICLFactory
+  address public override discountRegistry;
+  /// @inheritdoc ICLFactory
+  address public override clPoolTape;
+  /// @inheritdoc ICLFactory
+  address public override clPoolTapeManager;
+
+  /// @inheritdoc ICLFactory
+  mapping(int24 => uint24) public override tickSpacingToFee;
+  /// @dev Used in VotingEscrow to determine if a contract is a valid pool
+  mapping(address => bool) private _isPool;
+  /// @inheritdoc ICLFactory
+  address[] public override allPools;
+
+  int24[] private _tickSpacings;
+  mapping(address => mapping(address => mapping(int24 => address))) internal _getPool;
+
+  constructor(ConstructorParams memory _params) {
+    require(_params.owner != address(0), 'OwnerIsZero');
+    require(_params.swapFeeManager != address(0), 'SwapFeeManagerIsZero');
+    require(_params.unstakedFeeManager != address(0), 'UnstakedFeeManagerIsZero');
+    require(_params.poolImplementation != address(0), 'PoolImplementationIsZero');
+    require(_params.positionManager != address(0), 'PositionManagerIsZero');
+    require(_params.factoryRegistry != address(0), 'FactoryRegistryIsZero');
+    require(_params.discountRegistryManager != address(0), 'DiscountRegistryManagerIsZero');
+    require(_params.clPoolTapeManager != address(0), 'ClPoolTapeManagerIsZero');
+    owner = _params.owner;
+    swapFeeManager = _params.swapFeeManager;
+    unstakedFeeManager = _params.unstakedFeeManager;
+    voter = ILeafVoter(_params.voter);
+    poolImplementation = _params.poolImplementation;
+    positionManager = _params.positionManager;
+    factoryRegistry = IFactoryRegistry(_params.factoryRegistry);
+    defaultSwapHook = _params.defaultSwapHook;
+    discountRegistryManager = _params.discountRegistryManager;
+    clPoolTapeManager = _params.clPoolTapeManager;
+    defaultUnstakedFee = 0;
+    emit OwnerChanged(address(0), _params.owner);
+    emit SwapFeeManagerChanged(address(0), _params.swapFeeManager);
+    emit UnstakedFeeManagerChanged(address(0), _params.unstakedFeeManager);
+    emit DefaultUnstakedFeeChanged(0, 0);
+    emit DefaultSwapHookChanged(_params.defaultSwapHook);
+    emit DiscountRegistryManagerChanged(_params.discountRegistryManager);
+    emit ClPoolTapeManagerChanged(_params.clPoolTapeManager);
+
+    for (uint256 i; i < _params.initialFeeTiers.length; ++i) {
+      enableTickSpacing(_params.initialFeeTiers[i].tickSpacing, _params.initialFeeTiers[i].fee);
+    }
+  }
+
+  /// @inheritdoc ICLFactory
+  function createPool(address tokenA, address tokenB, uint24 tickSpacing) external override returns (address) {
+    return createPool({
+      tokenA: tokenA,
+      tokenB: tokenB,
+      tickSpacing: int24(tickSpacing),
+      sqrtPriceX96: 79_228_162_514_264_337_593_543_950_336 // encodePriceSqrt(1, 1)
+    });
+  }
+
+  /// @inheritdoc ICLFactory
+  function createPool(
+    address tokenA,
+    address tokenB,
+    int24 tickSpacing,
+    uint160 sqrtPriceX96
+  ) public override returns (address pool) {
+    require(tokenA != tokenB);
+    (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    require(token0 != address(0));
+    require(tickSpacingToFee[tickSpacing] != 0);
+    require(_getPool[token0][token1][tickSpacing] == address(0));
+    pool =
+      Clones.cloneDeterministic({master: poolImplementation, salt: keccak256(abi.encode(token0, token1, tickSpacing))});
+    CLPool(pool).initialize({
+      _factory: address(this),
+      _token0: token0,
+      _token1: token1,
+      _tickSpacing: tickSpacing,
+      _factoryRegistry: address(factoryRegistry),
+      _sqrtPriceX96: sqrtPriceX96
+    });
+    allPools.push(pool);
+    _isPool[pool] = true;
+    _getPool[token0][token1][tickSpacing] = pool;
+    // populate mapping in the reverse direction, deliberate choice to avoid the cost of comparing addresses
+    _getPool[token1][token0][tickSpacing] = pool;
+
+    /// @dev This function is invoked only after the pool is deployed
+    ///      and only after all validations are passed.
+    _createPoolHook({_tokenA: tokenA, _tokenB: tokenB, _pool: pool});
+
+    /// @dev Records the pool as a target so gauges can be created for it. Reverts until
+    ///      this factory is approved as a target factory in the registry.
+    factoryRegistry.registerTarget(pool);
+
+    emit PoolCreated(token0, token1, tickSpacing, pool);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setOwner(address _owner) external override {
+    address cachedOwner = owner;
+    require(msg.sender == cachedOwner);
+    require(_owner != address(0));
+    emit OwnerChanged(cachedOwner, _owner);
+    owner = _owner;
+  }
+
+  /// @inheritdoc ICLFactory
+  function setVoter(address _voter) external override {
+    require(msg.sender == owner, 'NotOwner');
+    require(address(voter) == address(0), 'VoterAlreadySet');
+    require(_voter != address(0), 'VoterIsZero');
+    voter = ILeafVoter(_voter);
+    emit VoterSet(_voter);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setSwapFeeManager(address _swapFeeManager) external override {
+    address cachedSwapFeeManager = swapFeeManager;
+    require(msg.sender == cachedSwapFeeManager);
+    require(_swapFeeManager != address(0));
+    swapFeeManager = _swapFeeManager;
+    emit SwapFeeManagerChanged(cachedSwapFeeManager, _swapFeeManager);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setUnstakedFeeManager(address _unstakedFeeManager) external override {
+    address cachedUnstakedFeeManager = unstakedFeeManager;
+    require(msg.sender == cachedUnstakedFeeManager);
+    require(_unstakedFeeManager != address(0));
+    unstakedFeeManager = _unstakedFeeManager;
+    emit UnstakedFeeManagerChanged(cachedUnstakedFeeManager, _unstakedFeeManager);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setDiscountRegistryManager(address _discountRegistryManager) external override {
+    require(msg.sender == discountRegistryManager, 'NotDiscountRegistryManager');
+    require(_discountRegistryManager != address(0), 'DiscountRegistryManagerIsZero');
+
+    discountRegistryManager = _discountRegistryManager;
+    emit DiscountRegistryManagerChanged(_discountRegistryManager);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setUnstakedFeeModule(address _unstakedFeeModule) external override {
+    require(msg.sender == unstakedFeeManager);
+    require(_unstakedFeeModule != address(0));
+    address oldFeeModule = unstakedFeeModule;
+    unstakedFeeModule = _unstakedFeeModule;
+    emit UnstakedFeeModuleChanged(oldFeeModule, _unstakedFeeModule);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setDefaultUnstakedFee(uint24 _defaultUnstakedFee) external override {
+    require(msg.sender == unstakedFeeManager);
+    require(_defaultUnstakedFee <= 500_000);
+    uint24 oldUnstakedFee = defaultUnstakedFee;
+    defaultUnstakedFee = _defaultUnstakedFee;
+    emit DefaultUnstakedFeeChanged(oldUnstakedFee, _defaultUnstakedFee);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setDefaultSwapHook(address _swapHook) external override {
+    require(msg.sender == swapFeeManager, 'NotSwapFeeManager');
+    defaultSwapHook = _swapHook;
+
+    emit DefaultSwapHookChanged(_swapHook);
+  }
+
+  /// @inheritdoc ICLFactory
+  function getPoolSwapHook(address _pool) external view override returns (address) {
+    address poolHook = poolSwapHook[_pool];
+    return poolHook == address(0) ? defaultSwapHook : poolHook;
+  }
+
+  /// @inheritdoc ICLFactory
+  function setPoolSwapHook(address[] calldata _pools, address[] calldata _swapHooks) external override {
+    require(msg.sender == swapFeeManager, 'NotSwapFeeManager');
+    uint256 poolsLength = _pools.length;
+    require(poolsLength == _swapHooks.length, 'LMM');
+
+    address pool;
+    address hook;
+    for (uint256 i = 0; i < poolsLength; i++) {
+      pool = _pools[i];
+      hook = _swapHooks[i];
+      poolSwapHook[pool] = hook;
+      emit PoolSwapHookChanged(pool, hook);
+    }
+  }
+
+  /// @inheritdoc ICLFactory
+  function setDiscountRegistry(address _discountRegistry) external override {
+    require(msg.sender == discountRegistryManager, 'NotDiscountRegistryManager');
+    require(_discountRegistry != address(0), 'DiscountRegistryIsZero');
+
+    discountRegistry = _discountRegistry;
+
+    emit DiscountRegistryChanged(_discountRegistry);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setClPoolTapeManager(address _clPoolTapeManager) external override {
+    require(msg.sender == clPoolTapeManager, 'NotClPoolTapeManager');
+    require(_clPoolTapeManager != address(0), 'ClPoolTapeManagerIsZero');
+    clPoolTapeManager = _clPoolTapeManager;
+    emit ClPoolTapeManagerChanged(_clPoolTapeManager);
+  }
+
+  /// @inheritdoc ICLFactory
+  function setClPoolTape(address _clPoolTape) external override {
+    require(msg.sender == clPoolTapeManager, 'NotClPoolTapeManager');
+    clPoolTape = _clPoolTape;
+    emit ClPoolTapeChanged(_clPoolTape);
+  }
+
+  /// @inheritdoc ICLFactory
+  function getUnstakedFee(address pool) external view override returns (uint24) {
+    ILeafVoter _leafVoter = voter;
+    if (address(_leafVoter) == address(0)) {
+      return 0;
+    }
+    address gauge = factoryRegistry.targetToGauge(pool);
+    // a zero emission cap disables fee collection on the gauge, so stop charging the fee
+    if (gauge == address(0) || !_leafVoter.isActivated(gauge) || factoryRegistry.emissionCap(gauge) == 0) {
+      return 0;
+    }
+
+    if (unstakedFeeModule != address(0)) {
+      try IFeeModule(unstakedFeeModule).getFee(pool) returns (uint24 fee) {
+        if (fee <= 1_000_000) return fee;
+      } catch {}
+    }
+    return defaultUnstakedFee;
+  }
+
+  /// @inheritdoc ICLFactory
+  function enableTickSpacing(int24 tickSpacing, uint24 fee) public override {
+    require(msg.sender == owner);
+    require(fee > 0 && fee <= 100_000);
+    // tick spacing is capped at 16384 to prevent the situation where tickSpacing is so large that
+    // TickBitmap#nextInitializedTickWithinOneWord overflows int24 container from a valid tick
+    // 16384 ticks represents a >5x price change with ticks of 1 bips
+    require(tickSpacing > 0 && tickSpacing < 16_384);
+    require(tickSpacingToFee[tickSpacing] == 0);
+
+    tickSpacingToFee[tickSpacing] = fee;
+    _tickSpacings.push(tickSpacing);
+    emit TickSpacingEnabled(tickSpacing, fee);
+  }
+
+  function getPool(address tokenA, address tokenB, int24 tickSpacing) external view override returns (address) {
+    return _getPool[tokenA][tokenB][tickSpacing];
+  }
+
+  function getPool(address tokenA, address tokenB, uint24 tickSpacing) external view override returns (address) {
+    return _getPool[tokenA][tokenB][int24(tickSpacing)];
+  }
+
+  /// @inheritdoc ICLFactory
+  function tickSpacings() external view override returns (int24[] memory) {
+    return _tickSpacings;
+  }
+
+  /// @inheritdoc ICLFactory
+  function allPoolsLength() external view override returns (uint256) {
+    return allPools.length;
+  }
+
+  /// @inheritdoc ICLFactory
+  function isPool(address pool) external view override returns (bool) {
+    return _isPool[pool];
+  }
+}
