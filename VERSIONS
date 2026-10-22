@@ -2,8 +2,22 @@ VERSIONS — metadex-slipstream
 Each version's Dromos Restricted Use License 1.0 converts to
 GPL-2.0-or-later five years after its first public distribution.
 
-version:
-commit tag:
-first-distribution: 2026-08-DD (public source publication)
-converts-to-gpl: 2031-08-DD
-deployments: (none — provisional)
+version: 1.0.1
+commit tag: bcdd6ee3003134b8f3981165e9b5e85d38a229e4
+first-distribution: 2026-09-15
+converts-to-gpl: 2031-09-15
+deployments:
+    arc - deployment-addresses/cllitelaunch-arc.json
+
+version: 1.1.0
+commit tag: cf1ae46f81bc45d5c0b7d15d22ef8c84eb777403
+first-distribution: 2026-10-21
+converts-to-gpl: 2031-10-21
+deployments:
+    arbitrum - deployment-addresses/cl-arbitrum.json
+    arc - deployment-addresses/cl-arc.json
+    base - deployment-addresses/cl-base.json
+    ethereum - deployment-addresses/cl-ethereum.json
+    ink - deployment-addresses/cl-ink.json
+    optimism - deployment-addresses/cl-optimism.json
+    robinhood - deployment-addresses/cl-robinhood.json
